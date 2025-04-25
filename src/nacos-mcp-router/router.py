@@ -114,8 +114,6 @@ async def add_mcp_server(mcp_server_name: str) -> str:
         if 'headers' not in server_config:
           server_config['headers'] = {}
 
-      router_logger.info("install mcp server: " + mcp_server_name + ", config: " + json.dumps(mcp_server.agentConfig, ensure_ascii=False))
-
       server = CustomServer(name=mcp_server_name,config=mcp_server.agentConfig)
       await server.wait_for_initialization()
       mcp_servers_dict[mcp_server_name] = server
