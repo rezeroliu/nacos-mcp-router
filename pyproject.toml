@@ -5,8 +5,9 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-     "chromadb>=1.0.5",
-    "requests>=2.32.3",
+ "chromadb>=1.0.5",
+ "mcp>=1.6.0",
+ "requests>=2.32.3",
 ]
 
 [build-system]
@@ -15,3 +16,4 @@ build-backend = "hatchling.build"
 
 [tool.uv]
 dev-dependencies = ["pyright>=1.1.389"]
+
