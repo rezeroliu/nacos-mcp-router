@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass, field
 from typing import List, Dict, Any
-
+from logger import NacosMcpRouteLogger
 @dataclass
 class InputProperty:
     type: str
@@ -121,7 +121,7 @@ class BackendEndpoint:
 class NacosMcpServerConfig:
     name: str
     protocol: str
-    description: str
+    description: str | None
     version: str
     remote_server_config: RemoteServerConfig
     local_server_config: Dict[str, Any] = field(default_factory=dict)
@@ -134,18 +134,22 @@ class NacosMcpServerConfig:
     def from_dict(cls, data: dict) -> "NacosMcpServerConfig":
         tool_spec_data = data.get("toolSpec")
         backend_endpoints_data = data.get("backendEndpoints")
-        return cls(
-            name=data["name"],
-            protocol=data["protocol"],
-            description=data["description"],
-            version=data["version"],
-            remote_server_config=RemoteServerConfig.from_dict(data["remoteServerConfig"]),
-            local_server_config=data.get("localServerConfig", {}) if data.get("localServerConfig") else {},
-            enabled=data.get("enabled", True),
-            capabilities=data.get("capabilities", []),
-            backend_endpoints=[BackendEndpoint.from_dict(e) for e in data.get("backendEndpoints", [])] if backend_endpoints_data else [],
-            tool_spec=ToolSpec.from_dict(tool_spec_data) if tool_spec_data else ToolSpec(tools=[], tools_meta={})
-        )
+        try:
+            return cls(
+                name=data["name"],
+                protocol=data["protocol"],
+                description=data["description"],
+                version=data["version"],
+                remote_server_config=RemoteServerConfig.from_dict(data["remoteServerConfig"]),
+                local_server_config=data.get("localServerConfig", {}) if data.get("localServerConfig") else {},
+                enabled=data.get("enabled", True),
+                capabilities=data.get("capabilities", []),
+                backend_endpoints=[BackendEndpoint.from_dict(e) for e in data.get("backendEndpoints", [])] if backend_endpoints_data else [],
+                tool_spec=ToolSpec.from_dict(tool_spec_data) if tool_spec_data else ToolSpec(tools=[], tools_meta={})
+            )
+        except Exception as e:
+            NacosMcpRouteLogger.get_logger().warning("failed to parse NacosMcpServerConfig from data: %s", data,  exc_info=e)
+            raise Exception("failed to parse NacosMcpServerConfig from data")
 
     @classmethod
     def from_string(cls, string: str) -> "NacosMcpServerConfig":
