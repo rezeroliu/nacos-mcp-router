@@ -14,7 +14,7 @@ jobs:
     name: Build ${{ matrix.package }}
     environment:
       name: pypi
-      url: https://pypi.org/p/mcp-server-nacos
+      url: https://pypi.org/p/nacos-mcp-router
     permissions:
       id-token: write # Required for trusted publishing
     runs-on: ubuntu-latest
