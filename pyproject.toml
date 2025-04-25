@@ -10,6 +10,13 @@ dependencies = [
  "requests>=2.32.3",
 ]
 
+[project.scripts]
+nacos-mcp-router = "nacos_mcp_router:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [tool.uv]
 dev-dependencies = ["pyright>=1.1.389"]
 

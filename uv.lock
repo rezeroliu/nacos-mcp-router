@@ -668,7 +668,7 @@ wheels = [
 [[package]]
 name = "nacos-mcp-router"
 version = "0.1.2"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "chromadb" },
     { name = "mcp" },
