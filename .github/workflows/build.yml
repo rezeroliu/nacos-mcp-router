@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: ["nacos-mcp-router"]
+        package: ["nacos_mcp_router"]
     name: Build ${{ matrix.package }}
     environment: release
     permissions:

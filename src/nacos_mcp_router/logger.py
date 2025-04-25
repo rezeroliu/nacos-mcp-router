@@ -6,9 +6,9 @@ class NacosMcpRouteLogger:
     logger: logging.Logger | None = None
     @classmethod
     def setup_logger(cls):
-        NacosMcpRouteLogger.logger = logging.getLogger("nacos-mcp-router")
+        NacosMcpRouteLogger.logger = logging.getLogger("nacos_mcp_router")
         NacosMcpRouteLogger.logger.setLevel(logging.INFO)
-        log_file = os.path.expanduser("~") + "/logs/nacos-mcp-router/router.log"
+        log_file = os.path.expanduser("~") + "/logs/nacos_mcp_router/router.log"
         log_dir = os.path.dirname(log_file)
         os.makedirs(log_dir, exist_ok=True)
         formatter = logging.Formatter(
@@ -31,6 +31,6 @@ class NacosMcpRouteLogger:
         if NacosMcpRouteLogger.logger is None:
             NacosMcpRouteLogger.setup_logger()
         if NacosMcpRouteLogger.logger is None:
-            return logging.getLogger("nacos-mcp-router")
+            return logging.getLogger("nacos_mcp_router")
         else:
             return NacosMcpRouteLogger.logger

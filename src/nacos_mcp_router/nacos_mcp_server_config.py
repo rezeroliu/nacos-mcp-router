@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass, field
 from typing import List, Dict, Any
-from logger import NacosMcpRouteLogger
+from .logger import NacosMcpRouteLogger
 @dataclass
 class InputProperty:
     type: str

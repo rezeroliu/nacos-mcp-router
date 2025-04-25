@@ -11,8 +11,8 @@ from chromadb.api.types import OneOrMany, ID, Document, GetResult, QueryResult
 from mcp import ClientSession
 from mcp.client.sse import sse_client
 from mcp.client.stdio import get_default_environment, StdioServerParameters, stdio_client
-from logger import NacosMcpRouteLogger
-from nacos_mcp_server_config import NacosMcpServerConfig
+from .logger import NacosMcpRouteLogger
+from .nacos_mcp_server_config import NacosMcpServerConfig
 
 def _stdio_transport_context(config: dict[str, Any]):
   server_params = StdioServerParameters(command=config['command'], args=config['args'], env=config['env'])
@@ -151,11 +151,11 @@ class McpServer:
 
 class ChromaDb:
   def __init__(self) -> None:
-    self.dbClient = chromadb.PersistentClient(path=os.path.expanduser("~") + "/.nacos-mcp-router/chroma_db",
+    self.dbClient = chromadb.PersistentClient(path=os.path.expanduser("~") + "/.nacos_mcp_router/chroma_db",
                 settings=Settings(
                     anonymized_telemetry=False,
                 ))
-    self._collectionId = "nacos-mcp-router-collection-" + str(os.getpid())
+    self._collectionId = "nacos_mcp_router-collection-" + str(os.getpid())
     self._collection = self.dbClient.get_or_create_collection(self._collectionId)
     self.preIds = []
 

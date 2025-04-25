@@ -3,8 +3,8 @@ import json
 import httpx
 from mcp import Tool
 
-from router_types import McpServer
-from nacos_mcp_server_config import NacosMcpServerConfig, ToolSpec
+from .router_types import McpServer
+from .nacos_mcp_server_config import NacosMcpServerConfig, ToolSpec
 
 
 class NacosHttpClient:

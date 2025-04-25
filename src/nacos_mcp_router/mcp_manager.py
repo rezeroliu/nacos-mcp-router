@@ -4,9 +4,9 @@ import threading
 import time
 import traceback
 
-from md5_util import get_md5
-from nacos_http_client import NacosHttpClient
-from router_types import ChromaDb, McpServer
+from .md5_util import get_md5
+from .nacos_http_client import NacosHttpClient
+from .router_types import ChromaDb, McpServer
 
 
 class McpUpdater:

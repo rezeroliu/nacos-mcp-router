@@ -5,11 +5,11 @@ import os
 from mcp.client.stdio import get_default_environment
 from mcp.server.fastmcp import FastMCP
 
-from logger import NacosMcpRouteLogger
-from mcp_manager import McpUpdater
-from nacos_http_client import NacosHttpClient
-from router_types import ChromaDb
-from router_types import CustomServer
+from .logger import NacosMcpRouteLogger
+from .mcp_manager import McpUpdater
+from .nacos_http_client import NacosHttpClient
+from .router_types import ChromaDb
+from .router_types import CustomServer
 
 nacos_addr = os.getenv("NACOS_ADDR","")
 nacos_user_name = os.getenv("NACOS_USERNAME","")
@@ -19,7 +19,7 @@ chroma_db_service = ChromaDb()
 mcp_updater = McpUpdater(nacosHttpClient=nacos_http_client, chromaDbService=chroma_db_service, update_interval=300)
 mcp_servers_dict = {}
 
-mcp = FastMCP("nacos-mcp-router")
+mcp = FastMCP("nacos_mcp_router")
 router_logger = NacosMcpRouteLogger.get_logger()
 
 @mcp.tool()
@@ -137,6 +137,3 @@ async def add_mcp_server(mcp_server_name: str) -> str:
   except Exception as e:
     router_logger.warning("failed to install mcp server: " + mcp_server_name, exc_info=e)
     return "failed to install mcp server: " + mcp_server_name
-
-if __name__ == "__main__":
-  mcp.run()
