@@ -71,6 +71,8 @@ Add this to your `claude_desktop_config.json`:
   }
 }
 ```
+</details>
+
 ### Usage with Cline
 
 Add this to your `cline_mcp_settings.json`:
