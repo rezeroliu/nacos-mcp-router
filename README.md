@@ -62,7 +62,7 @@ Add this to your `claude_desktop_config.json`:
   "mcpServers": {
   "nacos-mcp-router": {
     "command": "uvx",
-    "args": ["nacos-mcp-server"],
+    "args": ["nacos-mcp-router"],
     "env":{
        "NACOS_ADDR": "YOUR-NACOS-ADDR",
        "NACOS_USERNAME": "YOUR-NACOS-USERNAME", 
@@ -85,7 +85,7 @@ Add this to your `cline_mcp_settings.json`:
   "mcpServers": {
   "nacos-mcp-router": {
     "command": "uvx",
-    "args": ["nacos-mcp-server"],
+    "args": ["nacos-mcp-router"],
     "env":{
        "NACOS_ADDR": "YOUR-NACOS-ADDR",
        "NACOS_USERNAME": "YOUR-NACOS-USERNAME", 
