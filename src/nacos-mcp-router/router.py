@@ -52,7 +52,7 @@ async def search_mcp_server(task_description: str, key_words: list[str]) -> str:
 
     content = json.dumps(result, ensure_ascii=False)
 
-    jsonString = "### 获取" + task_description + "的步骤如下：\n" + '''
+    jsonString = "## 获取" + task_description + "的步骤如下：\n" + '''
     ### 1. 当前可用的mcp server列表为：''' + content + '''
     \n ### 2. 从当前可用的mcp server列表中选择你需要的mcp server调install_mcp_server工具安装mcp server
     '''

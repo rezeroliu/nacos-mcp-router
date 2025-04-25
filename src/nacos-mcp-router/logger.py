@@ -30,4 +30,7 @@ class NacosMcpRouteLogger:
     def get_logger(cls) -> logging.Logger:
         if NacosMcpRouteLogger.logger is None:
             NacosMcpRouteLogger.setup_logger()
-        return NacosMcpRouteLogger.logger
+        if NacosMcpRouteLogger.logger is None:
+            return logging.getLogger("nacos-mcp-router")
+        else:
+            return NacosMcpRouteLogger.logger

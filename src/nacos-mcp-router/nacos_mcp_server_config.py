@@ -156,9 +156,10 @@ class NacosMcpServerConfig:
         return cls.from_dict(json.loads(string))
 
     def get_tool_description(self) -> str:
-        des = self.description
+        des = "" if self.description is None else self.description
         for tool in self.tool_spec.tools:
-            des += "\n" + tool.description
+            if tool.description is not None:
+                des += "\n" + tool.description
 
         return des
 

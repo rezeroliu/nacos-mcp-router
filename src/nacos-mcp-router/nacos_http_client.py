@@ -30,7 +30,7 @@ class NacosHttpClient:
             jsonObj = json.loads(response.content.decode("utf-8"))
             data = jsonObj['data']
             config = NacosMcpServerConfig.from_dict(data)
-            mcpServer = McpServer(config.name, config.description,
+            mcpServer = McpServer(name=config.name, description=config.description if config.description is not None else "",
                                   agentConfig=config.local_server_config)
             mcpServer.mcp_config_detail = config
 
