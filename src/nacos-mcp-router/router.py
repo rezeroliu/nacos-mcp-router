@@ -138,8 +138,5 @@ async def add_mcp_server(mcp_server_name: str) -> str:
     router_logger.warning("failed to install mcp server: " + mcp_server_name, exc_info=e)
     return "failed to install mcp server: " + mcp_server_name
 
-async def main() -> None:
-  config = await search_mcp_server("天气",["天气"])
-  print(config)
 if __name__ == "__main__":
-  asyncio.run(main())
+  mcp.run()
