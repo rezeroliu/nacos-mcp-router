@@ -74,7 +74,7 @@ async def use_tool(mcp_server_name: str, mcp_tool_name: str, params:dict) -> str
       response = await mcp_server.execute_tool(mcp_tool_name, params)
     else:
       del mcp_servers_dict[mcp_server_name]
-      response = "mcp server is not healthy, use search_mcp_server to get mcp servers"
+      return  "mcp server is not healthy, use search_mcp_server to get mcp servers"
     return str(response.content)
   except Exception as e:
     router_logger.warning("failed to use tool: " + mcp_tool_name, exc_info=e)
