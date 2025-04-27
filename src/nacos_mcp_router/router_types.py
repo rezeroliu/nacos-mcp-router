@@ -20,12 +20,10 @@ def _stdio_transport_context(config: dict[str, Any]):
 
 
 def _sse_transport_context(config: dict[str, Any]):
-  return sse_client(config['url'], config['headers'])
+  return sse_client(url=config['url'], headers=config['headers'], timeout=10)
 
 
 class CustomServer:
-  """Manages MCP server connections and tool execution."""
-
   def __init__(self, name: str, config: dict[str, Any]) -> None:
     self.name: str = name
     self.config: dict[str, Any] = config
@@ -35,7 +33,7 @@ class CustomServer:
     self.exit_stack: AsyncExitStack = AsyncExitStack()
     self._initialized_event = asyncio.Event()
     self._shutdown_event = asyncio.Event()
-    if "url" in config:
+    if "url" in config['mcpServers'][name]:
       self._transport_context_factory = _sse_transport_context
     else:
       self._transport_context_factory = _stdio_transport_context
@@ -74,16 +72,8 @@ class CustomServer:
     await self._shutdown_event.wait()
 
   async def list_tools(self) -> list[Any]:
-    """List available tools from the server.
-
-    Returns:
-        A list of available tools.
-
-    Raises:
-        RuntimeError: If the server is not initialized.
-    """
     if not self.session:
-      raise RuntimeError(f"Server {self.name} not initialized")
+      raise RuntimeError(f"Server {self.name} is not initialized")
 
     tools_response = await self.session.list_tools()
 
@@ -108,11 +98,18 @@ class CustomServer:
 
       except Exception as e:
         attempt += 1
-
         if attempt < retries:
           await asyncio.sleep(delay)
+          await self.session.initialize()
+          try:
+            result = await self.session.call_tool(tool_name, arguments)
+            return result
+          except Exception as e:
+            raise e
         else:
           raise
+
+
 
   async def cleanup(self) -> None:
     """Clean up server resources."""

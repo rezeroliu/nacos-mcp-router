@@ -2,6 +2,7 @@ import logging
 import os
 from logging.handlers import RotatingFileHandler
 
+
 class NacosMcpRouteLogger:
     logger: logging.Logger | None = None
     @classmethod

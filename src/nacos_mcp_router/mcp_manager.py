@@ -7,6 +7,7 @@ import traceback
 from .md5_util import get_md5
 from .nacos_http_client import NacosHttpClient
 from .router_types import ChromaDb, McpServer
+from .logger import NacosMcpRouteLogger
 
 
 class McpUpdater:
@@ -28,6 +29,7 @@ class McpUpdater:
 
   def updateNow(self)-> None:
     mcpServers = self.nacosHttpClient.get_mcp_servers()
+    NacosMcpRouteLogger.get_logger().info("get mcp server list from nacos, size: " + str(len(mcpServers)))
     if len(mcpServers) == 0:
       return
 
@@ -38,13 +40,15 @@ class McpUpdater:
       des = mcpServer.description
       if mcpServer.mcp_config_detail is not None:
         des = mcpServer.mcp_config_detail.get_tool_description()
-      md5_str = get_md5(des)
 
+      cache[str(mcpServer.get_name())] = mcpServer
+      md5_str = get_md5(des)
       if mcpServer.name not in self.mcp_server_config_version or self.mcp_server_config_version[mcpServer.name] != md5_str:
         self.mcp_server_config_version[mcpServer.name] = md5_str
         ids.append(str(mcpServer.get_name()))
         docs.append(des)
-        cache[str(mcpServer.get_name())] = mcpServer
+
+
 
     self._cache = cache
 
@@ -57,8 +61,8 @@ class McpUpdater:
       try:
         time.sleep(self.interval)
         self.updateNow()
-      except Exception:
-        traceback.print_exc()
+      except Exception as e:
+        NacosMcpRouteLogger.get_logger().warning("exception while updating mcp servers: " , exc_info=e)
 
   def getMcpServer(self, query: str, count: int) -> list[McpServer]:
     result = self.chromaDbService.query(query,count)
@@ -73,6 +77,7 @@ class McpUpdater:
 
   def search_mcp_by_keyword(self, keyword: str) -> list[McpServer]:
     servers = list[McpServer]()
+    NacosMcpRouteLogger.get_logger().info("cache size: " + str(len(self._cache.values())))
 
     for mcp_server in self._cache.values():
 
@@ -80,7 +85,7 @@ class McpUpdater:
         continue
       if keyword in mcp_server.description:
         servers.append(mcp_server)
-    print("result mcp servers search by keywords: " + str(len(servers)))
+    NacosMcpRouteLogger.get_logger().info("result mcp servers search by keywords: " + str(len(servers)))
     return servers
 
   def get_mcp_server_by_name(self, mcp_name: str) -> McpServer:

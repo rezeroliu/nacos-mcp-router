@@ -16,7 +16,7 @@ nacos_user_name = os.getenv("NACOS_USERNAME","")
 nacos_password = os.getenv("NACOS_PASSWORD","")
 nacos_http_client = NacosHttpClient(nacosAddr=nacos_addr, userName=nacos_user_name,passwd=nacos_password)
 chroma_db_service = ChromaDb()
-mcp_updater = McpUpdater(nacosHttpClient=nacos_http_client, chromaDbService=chroma_db_service, update_interval=300)
+mcp_updater = McpUpdater(nacosHttpClient=nacos_http_client, chromaDbService=chroma_db_service, update_interval=60)
 mcp_servers_dict = {}
 
 mcp = FastMCP("nacos_mcp_router")
@@ -54,7 +54,7 @@ async def search_mcp_server(task_description: str, key_words: list[str]) -> str:
 
     jsonString = "## 获取" + task_description + "的步骤如下：\n" + '''
     ### 1. 当前可用的mcp server列表为：''' + content + '''
-    \n ### 2. 从当前可用的mcp server列表中选择你需要的mcp server调install_mcp_server工具安装mcp server
+    \n ### 2. 从当前可用的mcp server列表中选择你需要的mcp server调add_mcp_server工具安装mcp server
     '''
     return jsonString
   except Exception as e:
@@ -70,7 +70,11 @@ async def use_tool(mcp_server_name: str, mcp_tool_name: str, params:dict) -> str
       return "mcp server not found, use search_mcp_server to get mcp servers"
 
     mcp_server = mcp_servers_dict[mcp_server_name]
-    response = await mcp_server.execute_tool(mcp_tool_name, params)
+    if mcp_server.healthy():
+      response = await mcp_server.execute_tool(mcp_tool_name, params)
+    else:
+      del mcp_servers_dict[mcp_server_name]
+      response = "mcp server is not healthy, use search_mcp_server to get mcp servers"
     return str(response.content)
   except Exception as e:
     router_logger.warning("failed to use tool: " + mcp_tool_name, exc_info=e)
@@ -103,6 +107,8 @@ async def add_mcp_server(mcp_server_name: str) -> str:
       env = get_default_environment()
       if mcp_server.agentConfig is None:
         mcp_server.agentConfig = {}
+      if 'mcpServers' not in mcp_server.agentConfig or mcp_server.agentConfig['mcpServers'] is None:
+        mcp_server.agentConfig['mcpServers'] = {}
 
       mcp_servers = mcp_server.agentConfig["mcpServers"]
       for key, value in mcp_servers.items():
@@ -116,9 +122,11 @@ async def add_mcp_server(mcp_server_name: str) -> str:
 
       server = CustomServer(name=mcp_server_name,config=mcp_server.agentConfig)
       await server.wait_for_initialization()
-      mcp_servers_dict[mcp_server_name] = server
+      if server.healthy():
+        mcp_servers_dict[mcp_server_name] = server
 
     server = mcp_servers_dict[mcp_server_name]
+
     tools = await server.list_tools()
     tool_list = []
     for tool in tools:
