@@ -59,16 +59,23 @@ Add this to your `claude_desktop_config.json`:
 
 ```json
 {
-  "mcpServers": {
-  "nacos-mcp-router": {
-    "command": "uvx",
-    "args": ["nacos_mcp_router"],
-    "env":{
-       "NACOS_ADDR": "YOUR-NACOS-ADDR",
-       "NACOS_USERNAME": "YOUR-NACOS-USERNAME", 
-       "NACOS_PASSWORD": "YOU-NACOS-PASSWORD"
+    "mcpServers":
+    {
+        "nacos-mcp-router":
+        {
+            "command": "uvx",
+            "args":
+            [
+                "nacos_mcp_router"
+            ],
+            "env":
+            {
+                "NACOS_ADDR": "YOUR-NACOS-ADDR",
+                "NACOS_USERNAME": "YOUR-NACOS-USERNAME",
+                "NACOS_PASSWORD": "YOU-NACOS-PASSWORD"
+            }
+        }
     }
-  }
 }
 ```
 </details>
@@ -82,16 +89,23 @@ Add this to your `cline_mcp_settings.json`:
 
 ```json
 {
-  "mcpServers": {
-  "nacos-mcp-router": {
-    "command": "uvx",
-    "args": ["nacos_mcp_router"],
-    "env":{
-       "NACOS_ADDR": "YOUR-NACOS-ADDR",
-       "NACOS_USERNAME": "YOUR-NACOS-USERNAME", 
-       "NACOS_PASSWORD": "YOU-NACOS-PASSWORD"
+    "mcpServers":
+    {
+        "nacos-mcp-router":
+        {
+            "command": "uvx",
+            "args":
+            [
+                "nacos_mcp_router"
+            ],
+            "env":
+            {
+                "NACOS_ADDR": "YOUR-NACOS-ADDR",
+                "NACOS_USERNAME": "YOUR-NACOS-USERNAME",
+                "NACOS_PASSWORD": "YOU-NACOS-PASSWORD"
+            }
+        }
     }
-  }
 }
 ```
 
@@ -110,7 +124,7 @@ If you are doing local development, simply follow the steps:
 ```json
 {
   "mcpServers": {
-      "nacos-mcp-router": {
+    "nacos-mcp-router": {
       "command": "uv",
       "args": [
         "run",
@@ -122,9 +136,10 @@ If you are doing local development, simply follow the steps:
       ],
       "env": {
         "NACOS_ADDR": "YOUR-NACOS-ADDR",
-        "NACOS_USERNAME": "YOUR-NACOS-USERNAME", 
+        "NACOS_USERNAME": "YOUR-NACOS-USERNAME",
         "NACOS_PASSWORD": "YOU-NACOS-PASSWORD"
       }
+    }
   }
 }
 ```
