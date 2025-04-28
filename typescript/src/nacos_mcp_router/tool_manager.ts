@@ -1,6 +1,9 @@
 import axios from 'axios';
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
-import { log } from './logger';
+// import { log } from './logger';
+
+const log = console.log;
+const info = console.info;
 
 type Tool = {
   name: string;
@@ -30,7 +33,7 @@ export class ToolManager {
         this.tools.set(tool.name, tool);
       }
       
-      log.info(`成功加载 ${this.tools.size} 个工具`);
+      info(`成功加载 ${this.tools.size} 个工具`);
     } catch (error) {
       if (error instanceof McpError) {
         throw error;
