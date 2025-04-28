@@ -1,44 +1,68 @@
-import { Logger } from './types';
+import winston from 'winston';
+import path from 'path';
+import os from 'os';
+import 'winston-daily-rotate-file';
 
-class ConsoleLogger implements Logger {
-  private formatMessage(level: string, message: string, ...args: any[]): string {
-    const timestamp = new Date().toISOString();
-    return `[${timestamp}] [${level}] ${message}`;
+export class NacosMcpRouteLogger {
+  private static logger: winston.Logger | null = null;
+
+  private static setupLogger(): void {
+    const logDir = path.join(os.homedir(), 'logs', 'nacos_mcp_router');
+    const logFile = path.join(logDir, 'router.log');
+
+    // 确保日志目录存在
+    if (!require('fs').existsSync(logDir)) {
+      require('fs').mkdirSync(logDir, { recursive: true });
+    }
+
+    const formatter = winston.format.combine(
+      winston.format.timestamp({
+        format: 'YYYY-MM-DD HH:mm:ss'
+      }),
+      winston.format.printf(({ timestamp, level, message }) => {
+        return `${timestamp} | nacos_mcp_router | ${level.padEnd(8)} | ${message}`;
+      })
+    );
+
+    NacosMcpRouteLogger.logger = winston.createLogger({
+      level: 'info',
+      format: formatter,
+      transports: [
+        new winston.transports.DailyRotateFile({
+          filename: logFile,
+          datePattern: 'YYYY-MM-DD',
+          maxSize: '10m', // 10MB
+          maxFiles: '5', // 保留5个备份文件
+          zippedArchive: true,
+          format: formatter
+        })
+      ]
+    });
   }
 
-  debug(message: string, ...args: any[]): void {
-    console.debug(this.formatMessage('DEBUG', message), ...args);
+  public static getLogger(): winston.Logger {
+    if (!NacosMcpRouteLogger.logger) {
+      NacosMcpRouteLogger.setupLogger();
+    }
+    return NacosMcpRouteLogger.logger || winston.createLogger();
   }
 
-  info(message: string, ...args: any[]): void {
-    console.info(this.formatMessage('INFO', message), ...args);
+  public static info(message: string, ...args: any[]): void {
+    NacosMcpRouteLogger.getLogger().info(message, ...args);
   }
 
-  warn(message: string, ...args: any[]): void {
-    console.warn(this.formatMessage('WARN', message), ...args);
+  public static error(message: string, ...args: any[]): void {
+    NacosMcpRouteLogger.getLogger().error(message, ...args);
   }
 
-  error(message: string, ...args: any[]): void {
-    console.error(this.formatMessage('ERROR', message), ...args);
+  public static warn(message: string, ...args: any[]): void {
+    NacosMcpRouteLogger.getLogger().warn(message, ...args);
+  }
+
+  public static debug(message: string, ...args: any[]): void {
+    NacosMcpRouteLogger.getLogger().debug(message, ...args);
   }
 }
 
-// 全局日志函数，确保所有日志都通过stderr输出
-export const log = {
-  debug: (message: string, ...args: any[]) => {
-    if (process.env.DEBUG === 'true') {
-      console.error(`[DEBUG] ${message}`, ...args);
-    }
-  },
-  info: (message: string, ...args: any[]) => {
-    console.error(`[INFO] ${message}`, ...args);
-  },
-  warn: (message: string, ...args: any[]) => {
-    console.error(`[WARN] ${message}`, ...args);
-  },
-  error: (message: string, ...args: any[]) => {
-    console.error(`[ERROR] ${message}`, ...args);
-  }
-};
-
-export const logger: Logger = new ConsoleLogger(); 
+// 导出单例实例
+export const logger = NacosMcpRouteLogger.getLogger();

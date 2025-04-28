@@ -1,149 +1,199 @@
 import axios, { AxiosInstance } from 'axios';
-import { NacosConfig, ServiceInfo, ServiceInstance } from './types';
+import { McpServer } from './router_types';
 import { logger } from './logger';
-import { md5 } from './md5';
+import { Tool } from './types';
+import { NacosMcpServerConfigImpl } from './nacos_mcp_server_config';
 
 export class NacosHttpClient {
-  private client: AxiosInstance;
-  private config: NacosConfig;
-  private accessToken: string | null = null;
+  private readonly nacosAddr: string;
+  private readonly userName: string;
+  private readonly passwd: string;
+  private readonly client: AxiosInstance;
 
-  constructor(config: NacosConfig) {
-    this.config = config;
-      this.client = axios.create({
-        baseURL: config.serverAddr,
-        timeout: 5000,
-      });
-
-    // this.client.interceptors.request.use(async (config) => {
-    //   if (this.accessToken) {
-    //     config.headers['accessToken'] = this.accessToken;
-    //   }
-    //   return config;
-    // });
-  }
-
-  private async login(): Promise<void> {
-    try {
-      const response = await this.client.post('/nacos/v1/auth/login', {
-        username: this.config.username,
-        password: this.config.password,
-      });
-      this.accessToken = response.data.accessToken;
-    } catch (error) {
-      logger.error('Failed to login to Nacos:', error);
-      throw error;
+  constructor(nacosAddr: string, userName: string, passwd: string) {
+    if (!nacosAddr) {
+      throw new Error('nacosAddr cannot be an empty string');
     }
+    if (!userName) {
+      throw new Error('userName cannot be an empty string');
+    }
+    if (!passwd) {
+      throw new Error('passwd cannot be an empty string');
+    }
+
+    this.nacosAddr = nacosAddr;
+    this.userName = userName;
+    this.passwd = passwd;
+
+    this.client = axios.create({
+      baseURL: `http://${this.nacosAddr}`,
+      headers: {
+        'Content-Type': 'application/json',
+        'charset': 'utf-8',
+        'userName': this.userName,
+        'password': this.passwd
+      }
+    });
   }
 
-  public async getServiceInfo(serviceName: string): Promise<ServiceInfo> {
+  async getMcpServerByName(name: string): Promise<McpServer> {
+    const url = `/nacos/v3/admin/ai/mcp?mcpName=${name}`;
+    const mcpServer = new McpServer(name, '', {});
+
     try {
-      if (!this.accessToken && this.config.username && this.config.password) {
-        await this.login();
+      const response = await this.client.get(url);
+      if (response.status === 200) {
+        const data = response.data.data;
+        const config = NacosMcpServerConfigImpl.fromDict(data);
+        const server = new McpServer(
+          config.name,
+          config.description || '',
+          config.localServerConfig
+        );
+        server.mcpConfigDetail = config;
+
+        if (config.protocol !== 'stdio' && config.backendEndpoints.length > 0) {
+          const endpoint = config.backendEndpoints[0];
+          const httpSchema = endpoint.port === 443 ? 'https' : 'http';
+          let url = `${httpSchema}://${endpoint.address}:${endpoint.port}${config.remoteServerConfig.exportPath}`;
+          
+          if (!config.remoteServerConfig.exportPath.startsWith('/')) {
+            url = `${httpSchema}://${endpoint.address}:${endpoint.port}/${config.remoteServerConfig.exportPath}`;
+          }
+
+          if (!server.agentConfig.mcpServers) {
+            server.agentConfig.mcpServers = {};
+          }
+
+          server.agentConfig.mcpServers[server.name] = {
+            name: server.name,
+            description: server.description,
+            url: url
+          };
+        }
+        return server;
+      }
+    } catch (error) {
+      logger.warning(`failed to get mcp server ${name}, response: ${error}`);
+    }
+    return mcpServer;
+  }
+
+  async getMcpServersByPage(pageNo: number, pageSize: number): Promise<McpServer[]> {
+    const mcpServers: McpServer[] = [];
+    try {
+      const url = `/nacos/v3/admin/ai/mcp/list?pageNo=${pageNo}&pageSize=${pageSize}`;
+      const response = await this.client.get(url);
+
+      if (response.status !== 200) {
+        logger.warning(`failed to get mcp server list response: ${response.data}`);
+        return [];
       }
 
-      const response = await this.client.get<ServiceInfo>('/nacos/v1/ns/instance/list', {
-        params: {
-          serviceName,
-          namespaceId: this.config.namespace,
-          groupName: this.config.group,
-        },
-      });
+      const data = response.data.data;
+      for (const mcpServerDict of data.pageItems) {
+        if (mcpServerDict.enabled) {
+          const mcpName = mcpServerDict.name;
+          const mcpServer = await this.getMcpServerByName(mcpName);
 
-      return response.data;
+          if (mcpServer.description) {
+            mcpServers.push(mcpServer);
+          }
+        }
+      }
     } catch (error) {
-      logger.error(`Failed to get service info for ${serviceName}:`, error);
-      throw error;
+      logger.error('Error getting mcp servers by page:', error);
     }
+    return mcpServers;
   }
 
-  public async registerInstance(serviceName: string, instance: ServiceInstance): Promise<void> {
+  async getMcpServers(): Promise<McpServer[]> {
+    const mcpServers: McpServer[] = [];
     try {
-      if (!this.accessToken && this.config.username && this.config.password) {
-        await this.login();
+      const pageSize = 100;
+      const pageNo = 1;
+      const url = `/nacos/v3/admin/ai/mcp/list?pageNo=${pageNo}&pageSize=${pageSize}`;
+      
+      const response = await this.client.get(url);
+      if (response.status !== 200) {
+        logger.warning(`failed to get mcp server list, url ${url}, response: ${response.data}`);
+        return [];
       }
 
-      await this.client.post('/nacos/v1/ns/instance', null, {
-        params: {
-          serviceName,
-          ip: instance.ip,
-          port: instance.port,
-          weight: instance.weight,
-          enabled: instance.enabled,
-          healthy: instance.healthy,
-          ephemeral: instance.ephemeral,
-          clusterName: instance.clusterName,
-          metadata: JSON.stringify(instance.metadata),
-          namespaceId: this.config.namespace,
-          groupName: this.config.group,
-        },
-      });
-    } catch (error) {
-      logger.error(`Failed to register instance for ${serviceName}:`, error);
-      throw error;
-    }
-  }
+      const totalCount = response.data.data.totalCount;
+      const totalPages = Math.ceil(totalCount / pageSize);
 
-  public async deregisterInstance(serviceName: string, instance: ServiceInstance): Promise<void> {
-    try {
-      if (!this.accessToken && this.config.username && this.config.password) {
-        await this.login();
+      for (let i = 1; i <= totalPages; i++) {
+        const mcps = await this.getMcpServersByPage(i, pageSize);
+        mcpServers.push(...mcps);
       }
-
-      await this.client.delete('/nacos/v1/ns/instance', {
-        params: {
-          serviceName,
-          ip: instance.ip,
-          port: instance.port,
-          clusterName: instance.clusterName,
-          namespaceId: this.config.namespace,
-          groupName: this.config.group,
-        },
-      });
     } catch (error) {
-      logger.error(`Failed to deregister instance for ${serviceName}:`, error);
-      throw error;
+      logger.error('Error getting mcp servers:', error);
     }
+    return mcpServers;
   }
 
-  public async getConfig(): Promise<string> {
+  async updateMcpTools(mcpName: string, tools: Tool[]): Promise<boolean> {
     try {
-      if (!this.accessToken && this.config.username && this.config.password) {
-        await this.login();
+      const url = `/nacos/v3/admin/ai/mcp?mcpName=${mcpName}`;
+      const response = await this.client.get(url);
+
+      if (response.status === 200) {
+        const data = response.data.data;
+        const toolList = tools.map(tool => ({
+          name: tool.name,
+          description: tool.description,
+          inputSchema: tool.inputSchema
+        }));
+
+        const endpointSpecification: Record<string, any> = {};
+        if (data.protocol !== 'stdio') {
+          endpointSpecification.data = data.remoteServerConfig.serviceRef;
+          endpointSpecification.type = 'REF';
+        }
+
+        if (!data.toolSpec) {
+          data.toolSpec = {};
+        }
+
+        data.toolSpec.tools = toolList;
+        const params: Record<string, any> = {
+          mcpName: mcpName
+        };
+
+        const toolSpecification = data.toolSpec;
+        delete data.toolSpec;
+        delete data.backendEndpoints;
+
+        params.serverSpecification = JSON.stringify(data);
+        params.endpointSpecification = JSON.stringify(endpointSpecification);
+        params.toolSpecification = JSON.stringify(toolSpecification);
+
+        logger.info(`update mcp tools, params ${JSON.stringify(params)}`);
+
+        const updateUrl = `http://${this.nacosAddr}/nacos/v3/admin/ai/mcp?`;
+        const updateResponse = await axios.put(updateUrl, params, {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'charset': 'utf-8',
+            'userName': this.userName,
+            'password': this.passwd
+          }
+        });
+
+        if (updateResponse.status === 200) {
+          return true;
+        } else {
+          logger.warning(`failed to update mcp tools list, caused: ${updateResponse.data}`);
+          return false;
+        }
+      } else {
+        logger.warning(`failed to update mcp tools list, caused: ${response.data}`);
+        return false;
       }
-
-      const response = await this.client.get('/nacos/v1/cs/configs', {
-        params: {
-          dataId: this.config.dataId,
-          group: this.config.group,
-          namespaceId: this.config.namespace,
-        },
-      });
-
-      return response.data;
     } catch (error) {
-      logger.error('Failed to get config:', error);
-      throw error;
+      logger.error('Error updating mcp tools:', error);
+      return false;
     }
   }
-
-  public async publishConfig(content: string): Promise<void> {
-    try {
-      if (!this.accessToken && this.config.username && this.config.password) {
-        await this.login();
-      }
-
-      await this.client.post('/nacos/v1/cs/configs', null, {
-        params: {
-          dataId: this.config.dataId,
-          group: this.config.group,
-          content,
-          namespaceId: this.config.namespace,
-        },
-      });
-    } catch (error) {
-      logger.error('Failed to publish config:', error);
-      throw error;
-    }
-  }
-} 
+}
