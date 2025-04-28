@@ -1,5 +1,8 @@
 # nacos-mcp-router: A MCP server that provides  functionalities such as search, installation, proxy, and more.
 
+[切换到中文版](README_cn.md)
+
+
 ## Overview
 
 [Nacos](https://nacos.io) is an easy-to-use platform designed for dynamic service discovery and configuration and service management. It helps you to build cloud native applications and microservices platform easily.
@@ -18,7 +21,7 @@ This MCP(Model Context Protocol) Server provides tools to search, install, proxy
     - Add a MCP server. If the MCP server is a stdio server, this tool will install it and  establish connection to it. If the MCP server is a sse server, this tool will establish connection to it
     - Input:
       - `mcp_server_name`(string): The name of MCP server.
-    - Returns: Information.
+    - Returns: tool list of the MCP server and how to use these tools.
 3. `use_tool`
    - This tool helps LLM to use the tool of some MCP server. It will proxy requests to the target MCP server.
    - Input:
@@ -32,7 +35,7 @@ This MCP(Model Context Protocol) Server provides tools to search, install, proxy
 ### Using uv (recommended)
 
 When using [`uv`](https://docs.astral.sh/uv/) no specific installation is needed. We will
-use [`uvx`](https://docs.astral.sh/uv/guides/tools/) to directly run *mcp-server-nacos*.
+use [`uvx`](https://docs.astral.sh/uv/guides/tools/) to directly run *nacos-mcp-router*.
 
 ### Using PIP
 
@@ -50,9 +53,9 @@ python -m nacos-mcp-router
 
 ## Configuration
 
-### Usage with Claude Desktop
+### Usage with Cline、Cursor、Claude and other applications
 
-Add this to your `claude_desktop_config.json`:
+Add this to MCP settings of your application:
 
 <details>
 <summary>Using uvx</summary>
@@ -66,48 +69,19 @@ Add this to your `claude_desktop_config.json`:
             "command": "uvx",
             "args":
             [
-                "nacos_mcp_router"
+                "nacos-mcp-router@latest"
             ],
             "env":
             {
-                "NACOS_ADDR": "YOUR-NACOS-ADDR",
-                "NACOS_USERNAME": "YOUR-NACOS-USERNAME",
-                "NACOS_PASSWORD": "YOU-NACOS-PASSWORD"
+                "NACOS_ADDR": "<NACOS-ADDR>",
+                "NACOS_USERNAME": "<NACOS-USERNAME>",
+                "NACOS_PASSWORD": "<NACOS-PASSWORD>"
             }
         }
     }
 }
 ```
 </details>
-
-### Usage with Cline
-
-Add this to your `cline_mcp_settings.json`:
-
-<details>
-<summary>Using uvx</summary>
-
-```json
-{
-    "mcpServers":
-    {
-        "nacos-mcp-router":
-        {
-            "command": "uvx",
-            "args":
-            [
-                "nacos_mcp_router"
-            ],
-            "env":
-            {
-                "NACOS_ADDR": "YOUR-NACOS-ADDR",
-                "NACOS_USERNAME": "YOUR-NACOS-USERNAME",
-                "NACOS_PASSWORD": "YOU-NACOS-PASSWORD"
-            }
-        }
-    }
-}
-```
 
 > You may need to put the full path to the `uvx` executable in the `command` field. You can get this by running `which uvx` on MacOS/Linux or `where uvx` on Windows.
 
@@ -127,17 +101,12 @@ If you are doing local development, simply follow the steps:
     "nacos-mcp-router": {
       "command": "uv",
       "args": [
-        "run",
-        "--with",
-        "mcp[cli]",
-        "mcp",
-        "run",
-        "$PATH_TO_PROJECT/router.py"
+        "--directory","PATH-TO-PROJECT","run","nacos-mcp-router"
       ],
       "env": {
-        "NACOS_ADDR": "YOUR-NACOS-ADDR",
-        "NACOS_USERNAME": "YOUR-NACOS-USERNAME",
-        "NACOS_PASSWORD": "YOU-NACOS-PASSWORD"
+        "NACOS_ADDR": "<NACOS-ADDR>",
+        "NACOS_USERNAME": "<NACOS-USERNAME>",
+        "NACOS_PASSWORD": "<NACOS-PASSWORD>"
       }
     }
   }

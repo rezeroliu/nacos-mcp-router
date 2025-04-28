@@ -2,7 +2,10 @@ import asyncio
 import json
 import os
 
+import anyio
+from mcp import types
 from mcp.client.stdio import get_default_environment
+from mcp.server import Server
 from mcp.server.fastmcp import FastMCP
 
 from .logger import NacosMcpRouteLogger
@@ -19,15 +22,19 @@ chroma_db_service = ChromaDb()
 mcp_updater = McpUpdater(nacosHttpClient=nacos_http_client, chromaDbService=chroma_db_service, update_interval=60)
 mcp_servers_dict = {}
 
-mcp = FastMCP("nacos_mcp_router")
 router_logger = NacosMcpRouteLogger.get_logger()
 
-@mcp.tool()
 async def search_mcp_server(task_description: str, key_words: list[str]) -> str:
-  """根据任务描述及关键字搜索mcp server，制定完成任务的步骤
-  Args:
-        task_description: 用户任务描述，使用中文
-        key_words: 字符串数组，用户任务关键字，使用中文,可以为多个，最多为2个
+  """
+    Name:
+        search_mcp_server
+
+    Description:
+        执行任务前首先使用本工具。根据任务描述及关键字搜索mcp server，制定完成任务的步骤。
+
+    Args:
+        task_description (string): 用户任务描述，使用中文
+        key_words (list): 字符串数组，用户任务关键字，使用中文,可以为多个，最多为2个
   """
   try:
     mcp_servers1 = []
@@ -62,7 +69,7 @@ async def search_mcp_server(task_description: str, key_words: list[str]) -> str:
     jsonString = "failed to search mcp server for " + task_description
     return jsonString
 
-@mcp.tool()
+
 async def use_tool(mcp_server_name: str, mcp_tool_name: str, params:dict) -> str:
   try:
     if mcp_server_name not in mcp_servers_dict:
@@ -80,8 +87,6 @@ async def use_tool(mcp_server_name: str, mcp_tool_name: str, params:dict) -> str
     router_logger.warning("failed to use tool: " + mcp_tool_name, exc_info=e)
     return "failed to use tool: " + mcp_tool_name
 
-
-@mcp.tool()
 async def add_mcp_server(mcp_server_name: str) -> str:
   """
   安装指定的mcp server
@@ -145,3 +150,95 @@ async def add_mcp_server(mcp_server_name: str) -> str:
   except Exception as e:
     router_logger.warning("failed to install mcp server: " + mcp_server_name, exc_info=e)
     return "failed to install mcp server: " + mcp_server_name
+
+def main() -> int:
+  app = Server("nacos_mcp_router")
+
+  @app.call_tool()
+  async def call_tool(
+          name: str, arguments: dict
+  ) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
+    match name:
+      case "search_mcp_server":
+        content = await search_mcp_server(arguments["task_description"], arguments["key_words"])
+        return [types.TextContent(type="text", text=content)]
+      case "add_mcp_server":
+        content = await add_mcp_server(arguments["mcp_server_name"])
+        return [types.TextContent(type="text", text=content)]
+      case "use_tool":
+        content = await use_tool(arguments["mcp_server_name"],arguments["mcp_tool_name"], arguments["params"])
+        return [types.TextContent(type="text", text=content)]
+      case _:
+        return [types.TextContent(type="text", text="not implemented tool")]
+    
+
+  @app.list_tools()
+  async def list_tools() -> list[types.Tool]:
+    return [
+      types.Tool(
+        name="search_mcp_server",
+        description="执行任务前首先使用本工具。根据任务描述及关键字搜索mcp server, 制定完成任务的步骤。",
+        inputSchema={
+          "type": "object",
+          "required": ["task_description", "key_words"],
+          "properties": {
+            "task_description": {
+              "type": "string",
+              "description": "用户任务描述 ",
+            },
+            "key_words": {
+              "type": "list[string]",
+              "description": "用户任务关键字，可以为多个，最多为2个"
+            }
+          },
+        },
+      ),
+      types.Tool(
+        name="add_mcp_server",
+        description="安装指定的mcp server",
+        inputSchema={
+          "type": "object",
+          "required": ["mcp_server_name"],
+          "properties": {
+            "mcp_server_name": {
+              "type": "string",
+              "description": "MCP Server名称"
+            }
+          }
+        }
+      ),
+      types.Tool(
+        name="use_tool",
+        description="使用某个MCP Server的工具",
+        inputSchema={
+           "type": "object",
+          "required": ["mcp_server_name","mcp_tool_name","params"],
+          "properties": {
+            "mcp_server_name": {
+              "type": "string",
+              "description": "需要使用的MCP Server名称"
+            },
+            "mcp_tool_name":{
+              "type": "string",
+              "description": "需要使用的MCP Server工具名称"
+            },
+            "params": {
+              "type": "map",
+              "description": "需要使用的MCP Server工具的参数"
+            }
+          }
+        }
+      )
+    ]
+
+  from mcp.server.stdio import stdio_server
+
+  async def arun():
+    async with stdio_server() as streams:
+      await app.run(
+        streams[0], streams[1], app.create_initialization_options()
+      )
+
+  anyio.run(arun)
+  
+  return 0
