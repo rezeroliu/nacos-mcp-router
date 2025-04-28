@@ -82,6 +82,7 @@ python -m nacos-mcp-router
 ```
 </details>
 以Cline为例，配置完成后，能正确显示工具列表，如下图，说明启动成功。
+
 ![alt text](image.png)
 
 > 如果启动失败，你需要把`command`字段里的`uvx`替换为命令的全路径。`uvx`命令全路径查找方法为：MacOS或Linux系统下使用`which uvx`，Windows系统使用`where uvx`。
