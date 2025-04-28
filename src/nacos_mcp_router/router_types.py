@@ -33,6 +33,7 @@ class CustomServer:
     self.exit_stack: AsyncExitStack = AsyncExitStack()
     self._initialized_event = asyncio.Event()
     self._shutdown_event = asyncio.Event()
+    NacosMcpRouteLogger.get_logger().info("mcp server config: " + str(config))
     if "url" in config['mcpServers'][name]:
       self._transport_context_factory = _sse_transport_context
     else:

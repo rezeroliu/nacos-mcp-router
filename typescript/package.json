@@ -1,0 +1,27 @@
+{
+  "name": "nacos-mcp-router-ts",
+  "version": "1.0.0",
+  "description": "Nacos MCP Router TypeScript implementation",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "ts-node src/index.ts",
+    "dev": "ts-node-dev --respawn src/index.ts",
+    "test": "jest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.10.2",
+    "@types/node": "^20.11.24",
+    "axios": "^1.9.0",
+    "chromadb": "^2.3.0",
+    "chromadb-default-embed": "^2.14.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "devDependencies": {
+    "ts-node-dev": "^2.0.0"
+  }
+}

@@ -11,12 +11,12 @@ from .nacos_http_client import NacosHttpClient
 from .router_types import ChromaDb
 from .router_types import CustomServer
 
-nacos_addr = os.getenv("NACOS_ADDR","")
-nacos_user_name = os.getenv("NACOS_USERNAME","")
-nacos_password = os.getenv("NACOS_PASSWORD","")
+nacos_addr = os.getenv("NACOS_ADDR","localhost:8848")
+nacos_user_name = os.getenv("NACOS_USERNAME","nacos")
+nacos_password = os.getenv("NACOS_PASSWORD","Ip7x9546iT")
 nacos_http_client = NacosHttpClient(nacosAddr=nacos_addr, userName=nacos_user_name,passwd=nacos_password)
 chroma_db_service = ChromaDb()
-mcp_updater = McpUpdater(nacosHttpClient=nacos_http_client, chromaDbService=chroma_db_service, update_interval=60)
+mcp_updater = McpUpdater(nacosHttpClient=nacos_http_client, chromaDbService=chroma_db_service, update_interval=10)
 mcp_servers_dict = {}
 
 mcp = FastMCP("nacos_mcp_router")
@@ -94,7 +94,7 @@ async def add_mcp_server(mcp_server_name: str) -> str:
       mcp_server = mcp_updater.get_mcp_server_by_name(mcp_server_name)
 
     if mcp_server is None:
-      return mcp_server_name + " is not found" + ", use search_mcp_server to get mcp servers"
+      return f"mcp server {mcp_server_name} 未找到，请使用 search_mcp_server 工具获取可用的 mcp server 列表"
 
     disenabled_tools = {}
     tools_meta = mcp_server.mcp_config_detail.tool_spec.tools_meta
@@ -109,6 +109,15 @@ async def add_mcp_server(mcp_server_name: str) -> str:
         mcp_server.agentConfig = {}
       if 'mcpServers' not in mcp_server.agentConfig or mcp_server.agentConfig['mcpServers'] is None:
         mcp_server.agentConfig['mcpServers'] = {}
+
+      # 确保当前 mcp server 的配置存在
+      # if mcp_server_name not in mcp_server.agentConfig['mcpServers']:
+      #   mcp_server.agentConfig['mcpServers'][mcp_server_name] = {
+      #     'name': mcp_server_name,
+      #     'description': mcp_server.description,
+      #     'env': {},
+      #     'headers': {}
+      #   }
 
       mcp_servers = mcp_server.agentConfig["mcpServers"]
       for key, value in mcp_servers.items():
@@ -143,5 +152,5 @@ async def add_mcp_server(mcp_server_name: str) -> str:
     result = "1. " + mcp_server_name + "安装完成, tool 列表为: " + json.dumps(tool_list, ensure_ascii=False) +  "\n 2." + mcp_server_name + "的工具需要通过nacos-mcp-router的use_tool工具代理使用"
     return result
   except Exception as e:
-    router_logger.warning("failed to install mcp server: " + mcp_server_name, exc_info=e)
-    return "failed to install mcp server: " + mcp_server_name
+    router_logger.warning(f"failed to install mcp server: {str(e)}", exc_info=e)
+    return f"failed to install mcp server: {mcp_server_name}, error: {str(e)}"

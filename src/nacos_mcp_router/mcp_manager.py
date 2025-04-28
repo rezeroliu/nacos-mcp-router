@@ -49,7 +49,9 @@ class McpUpdater:
         docs.append(des)
 
 
-
+    NacosMcpRouteLogger.get_logger().info("updated mcp server cache, size: " + str(len(cache)))
+    mcp_server_names = list(cache.keys())
+    NacosMcpRouteLogger.get_logger().info("updated mcp server names: " + ", ".join(mcp_server_names))
     self._cache = cache
 
     if len(ids) > 0:
