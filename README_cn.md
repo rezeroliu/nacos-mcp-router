@@ -44,9 +44,12 @@ use [`uvx`](https://docs.astral.sh/uv/guides/tools/) 直接运行 *nacos-mcp-rou
 pip install nacos-mcp-router
 ```
 
-安装完成后，使用如下命令运行:
+安装完成后，使用如下命令运行（以Nacos本地standalone模式部署为例）:
 
 ```
+export NACOS_ADDR=127.0.0.1:8848
+export NACOS_USERNAME=nacos
+export NACOS_PASSWORD=$PASSWORD
 python -m nacos-mcp-router
 ```
 
@@ -56,8 +59,7 @@ python -m nacos-mcp-router
 
 添加MCP Server配置如下:
 
-<details>
-<summary>使用 uvx</summary>
+#### 使用 uvx
 
 ```json
 {
@@ -72,22 +74,21 @@ python -m nacos-mcp-router
             ],
             "env":
             {
-                "NACOS_ADDR": "<NACOS-ADDR>",
-                "NACOS_USERNAME": "<NACOS-USERNAME>",
-                "NACOS_PASSWORD": "<NACOS-PASSWORD>"
+                "NACOS_ADDR": "<NACOS-ADDR>, 选填，默认为127.0.0.1:8848",
+                "NACOS_USERNAME": "<NACOS-USERNAME>, 选填，默认为nacos",
+                "NACOS_PASSWORD": "<NACOS-PASSWORD>, 必填"
             }
         }
     }
 }
 ```
-</details>
+
 以Cline为例，配置完成后，能正确显示工具列表，如下图，说明启动成功。
 
 ![alt text](image.png)
 
 > 如果启动失败，你需要把`command`字段里的`uvx`替换为命令的全路径。`uvx`命令全路径查找方法为：MacOS或Linux系统下使用`which uvx`，Windows系统使用`where uvx`。
 
-</details>
 
 ## 开发
 
@@ -106,9 +107,9 @@ python -m nacos-mcp-router
         "--directory","PATH-TO-PROJECT","run","nacos-mcp-router"
       ],
       "env": {
-        "NACOS_ADDR": "<NACOS-ADDR>",
-        "NACOS_USERNAME": "<NACOS-USERNAME>",
-        "NACOS_PASSWORD": "<NACOS-PASSWORD>"
+        "NACOS_ADDR": "<NACOS-ADDR>, 选填，默认为127.0.0.1:8848",
+        "NACOS_USERNAME": "<NACOS-USERNAME>, 选填，默认为nacos",
+        "NACOS_PASSWORD": "<NACOS-PASSWORD>, 必填"
       }
     }
   }
