@@ -1,8 +1,6 @@
 import axios from 'axios';
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
-// import { log } from './logger';
 
-const log = console.log;
 const info = console.info;
 
 type Tool = {
