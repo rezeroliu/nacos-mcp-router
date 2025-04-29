@@ -45,9 +45,12 @@ Alternatively you can install `nacos-mcp-router` via pip:
 pip install nacos-mcp-router
 ```
 
-After installation, you can run it as a script using:
+After installation, you can run it as a script using（As an example，Nacos is deployed in standalone mode on the local machine）:
 
 ```
+export NACOS_ADDR=127.0.0.1:8848
+export NACOS_USERNAME=nacos
+export NACOS_PASSWORD=$PASSWORD
 python -m nacos-mcp-router
 ```
 
@@ -57,8 +60,7 @@ python -m nacos-mcp-router
 
 Add this to MCP settings of your application:
 
-<details>
-<summary>Using uvx</summary>
+#### Using uvx
 
 ```json
 {
@@ -73,19 +75,17 @@ Add this to MCP settings of your application:
             ],
             "env":
             {
-                "NACOS_ADDR": "<NACOS-ADDR>",
-                "NACOS_USERNAME": "<NACOS-USERNAME>",
-                "NACOS_PASSWORD": "<NACOS-PASSWORD>"
+                "NACOS_ADDR": "<NACOS-ADDR>, optional, default is 127.0.0.1:8848",
+                "NACOS_USERNAME": "<NACOS-USERNAME>, optional, default is nacos",
+                "NACOS_PASSWORD": "<NACOS-PASSWORD>, required"
             }
         }
     }
 }
 ```
-</details>
 
 > You may need to put the full path to the `uvx` executable in the `command` field. You can get this by running `which uvx` on MacOS/Linux or `where uvx` on Windows.
 
-</details>
 
 ## Development
 
@@ -104,9 +104,9 @@ If you are doing local development, simply follow the steps:
         "--directory","PATH-TO-PROJECT","run","nacos-mcp-router"
       ],
       "env": {
-        "NACOS_ADDR": "<NACOS-ADDR>",
-        "NACOS_USERNAME": "<NACOS-USERNAME>",
-        "NACOS_PASSWORD": "<NACOS-PASSWORD>"
+        "NACOS_ADDR": "<NACOS-ADDR>, optional, default is 127.0.0.1:8848",
+        "NACOS_USERNAME": "<NACOS-USERNAME>, optional, default is nacos",
+        "NACOS_PASSWORD": "<NACOS-PASSWORD>, required"
       }
     }
   }

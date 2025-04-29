@@ -14,10 +14,10 @@ from .nacos_http_client import NacosHttpClient
 from .router_types import ChromaDb
 from .router_types import CustomServer
 
-nacos_addr = os.getenv("NACOS_ADDR","")
-nacos_user_name = os.getenv("NACOS_USERNAME","")
+nacos_addr = os.getenv("NACOS_ADDR","127.0.0.1:8848")
+nacos_user_name = os.getenv("NACOS_USERNAME","nacos")
 nacos_password = os.getenv("NACOS_PASSWORD","")
-nacos_http_client = NacosHttpClient(nacosAddr=nacos_addr, userName=nacos_user_name,passwd=nacos_password)
+nacos_http_client = NacosHttpClient(nacosAddr=nacos_addr if nacos_addr != "" else "127.0.0.1:8848", userName=nacos_user_name if nacos_user_name != "" else "nacos",passwd=nacos_password)
 chroma_db_service = ChromaDb()
 mcp_updater = McpUpdater(nacosHttpClient=nacos_http_client, chromaDbService=chroma_db_service, update_interval=60)
 mcp_servers_dict = {}
