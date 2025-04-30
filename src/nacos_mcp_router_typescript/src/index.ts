@@ -1,5 +1,5 @@
-import { Router } from './nacos_mcp_router/router';
-import { logger } from './nacos_mcp_router/logger';
+import { Router } from './router';
+import { logger } from './logger';
 
 const config = {
   nacos: {

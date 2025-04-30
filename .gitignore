@@ -172,4 +172,4 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
-typescript/node_modules
+src/nacos_mcp_router_typescript/node_modules
