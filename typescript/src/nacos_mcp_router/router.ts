@@ -89,7 +89,7 @@ export class Router {
             const jsonString = `## 获取${taskDescription}的步骤如下：
 ### 1. 当前可用的mcp server列表为：
 ${content}
-### 2. 从当前可用的mcp server列表中选择你需要的mcp server调add_mcp_server工具安装mcp server`;
+### 2. 从当前可用的mcp server列表中选择你需要的mcp server调AddMcpServer工具安装mcp server`;
 
             return {
               content: [{
@@ -123,6 +123,7 @@ ${content}
             };
           } catch (error) {
             logger.error(`Failed to use tool ${toolName} from server ${mcpServerName}:`, error);
+            // throw new McpError(ErrorCode.InternalError, `Failed to use tool ${toolName} from server ${mcpServerName}`);
             return {
               content: [{
                 type: "text",
@@ -148,12 +149,6 @@ ${content}
           } catch (error) {
             logger.error(`Failed to add mcp server ${mcpServerName}:`, error);
             throw new McpError(ErrorCode.InternalError, `Failed to add mcp server ${mcpServerName}`);
-            // return {
-            //   content: [{
-            //     type: "text",
-            //     text: `Failed to add mcp server ${mcpServerName}`
-            //   }]
-            // };
           }
         }
       );

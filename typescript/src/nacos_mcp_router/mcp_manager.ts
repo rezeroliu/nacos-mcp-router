@@ -1,7 +1,7 @@
 import { logger } from "./logger";
 import { NacosHttpClient } from "./nacos_http_client";
 import { Collection } from "chromadb";
-import { ChromaDb, NacosMcpServer } from "./router_types";
+import { ChromaDb, CustomServer, NacosMcpServer } from "./router_types";
 import { md5 } from "./md5";
 import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types";
 
@@ -11,6 +11,7 @@ export class McpManager {
   private update_interval: number;
   private _cache: Map<string, NacosMcpServer> = new Map();
   private mcp_server_config_version: Map<string, string> = new Map();
+  private healthyMcpServers: Map<string, CustomServer> = new Map(); // 存活的nacos mcp servers
 
   constructor(
     nacosClient: NacosHttpClient,
@@ -136,22 +137,91 @@ export class McpManager {
     return this._cache.get(mcpName);
   }
 
-  // async useTool(mcpServerName: string, toolName: string, params: Record<string, any>): Promise<any> {
-  //   const mcpServer = await this.getMcpServerByName(mcpServerName);
-  //   if (!mcpServer) {
-  //     throw new Error(`MCP server ${mcpServerName} not found`);
-  //   }
-  //   // TODO: 实现具体的工具调用逻辑
-  //   return { success: true };
-  // }
+  async useTool(mcpServerName: string, toolName: string, params: Record<string, any>): Promise<any> {
+    const mcpServer = this.healthyMcpServers.get(mcpServerName)
+    if (!mcpServer) {
+      throw new McpError(ErrorCode.InternalError, `MCP server ${mcpServerName} not found`);
+    }
+
+    if (mcpServer.healthy()) {
+      const response = await mcpServer.executeTool(toolName, params);
+      return response.content;
+    } else {
+      this.healthyMcpServers.delete(mcpServerName);
+      return "mcp server is not healthy, use search_mcp_server to get mcp servers";
+    }
+  }
 
   async addMcpServer(mcpServerName: string) {
-    let mcpServer = await this.nacosClient.getMcpServerByName(mcpServerName);
+    let mcpServer: NacosMcpServer | undefined = await this.nacosClient.getMcpServerByName(mcpServerName);
     if (!mcpServer) {
       mcpServer = this._cache.get(mcpServerName);
     }
     if (!mcpServer || mcpServer.description === '' || !mcpServer.description) {
       throw new McpError(ErrorCode.InternalError, `MCP server ${mcpServerName} not found`);
     }
+
+    const disableTools: Record<string, boolean> = {};
+    const toolMeta = mcpServer.mcpConfigDetail?.toolSpec?.toolsMeta;
+    if (toolMeta) {
+      for (const [toolName, meta] of Object.entries(toolMeta)) {
+        if (!meta.enabled) {
+          disableTools[toolName] = true;
+        }
+      }
+    }
+
+    if (!this.healthyMcpServers.has(mcpServerName)) {
+      const env = process.env || {};
+      if (!mcpServer.agentConfig) {
+        mcpServer.agentConfig = {};
+      }
+      if (!mcpServer.agentConfig.mcpServers || mcpServer.agentConfig.mcpServers === null) {
+        mcpServer.agentConfig.mcpServers = {};
+      }
+
+      const mcpServers = mcpServer.agentConfig.mcpServers;
+      for (const [key, value] of Object.entries(mcpServers)) {
+        const serverConfig = value as Record<string, any>;
+        if (serverConfig.env) {
+          for (const [k, v] of Object.entries(serverConfig.env)) {
+            env[k] = v;
+          }
+        }
+        serverConfig.env = env;
+        if (!serverConfig.headers) {
+          serverConfig.headers = {};
+        }
+      }
+
+      const server = new CustomServer(mcpServerName, mcpServer.agentConfig);
+      await server.waitForInitialization();
+      if (server.healthy()) {
+        this.healthyMcpServers.set(mcpServerName, server);
+      }
+    }
+
+    const server = this.healthyMcpServers.get(mcpServerName);
+    if (!server) {
+      throw new McpError(ErrorCode.InternalError, `Failed to initialize MCP server ${mcpServerName}`);
+    }
+
+    const tools = await server.listTools();
+    const toolList: any[] = [];
+    for (const tool of tools) {
+      if (disableTools[tool.name]) {
+        continue;
+      }
+      const dct: Record<string, any> = {
+        name: tool.name,
+        description: tool.description,
+        inputSchema: tool.inputSchema
+      };
+      toolList.push(dct);
+    }
+
+    await this.nacosClient.updateMcpTools(mcpServerName, tools);
+
+    return `1. ${mcpServerName}安装完成, tool 列表为: ${JSON.stringify(toolList, null, 2)}2. ${mcpServerName}的工具需要通过nacos-mcp-router的UseTool工具代理使用`;
   }
 }

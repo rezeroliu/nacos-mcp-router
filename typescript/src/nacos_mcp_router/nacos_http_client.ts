@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
-import { McpServer } from './router_types';
+import { NacosMcpServer } from './router_types';
 import { logger } from './logger';
 import { Tool } from './types';
 import { NacosMcpServerConfigImpl } from './nacos_mcp_server_config';
@@ -36,16 +36,16 @@ export class NacosHttpClient {
     });
   }
 
-  async getMcpServerByName(name: string): Promise<McpServer> {
+  async getMcpServerByName(name: string): Promise<NacosMcpServer> {
     const url = `/nacos/v3/admin/ai/mcp?mcpName=${name}`;
-    const mcpServer = new McpServer(name, '', {});
+    const mcpServer = new NacosMcpServer(name, '', {});
 
     try {
       const response = await this.client.get(url);
       if (response.status === 200) {
         const data = response.data.data;
         const config = NacosMcpServerConfigImpl.fromDict(data);
-        const server = new McpServer(
+        const server = new NacosMcpServer(
           config.name,
           config.description || '',
           config.localServerConfig
@@ -79,8 +79,8 @@ export class NacosHttpClient {
     return mcpServer;
   }
 
-  async getMcpServersByPage(pageNo: number, pageSize: number): Promise<McpServer[]> {
-    const mcpServers: McpServer[] = [];
+  async getMcpServersByPage(pageNo: number, pageSize: number): Promise<NacosMcpServer[]> {
+    const mcpServers: NacosMcpServer[] = [];
     try {
       const url = `/nacos/v3/admin/ai/mcp/list?pageNo=${pageNo}&pageSize=${pageSize}`;
       const response = await this.client.get(url);
@@ -107,8 +107,8 @@ export class NacosHttpClient {
     return mcpServers;
   }
 
-  async getMcpServers(): Promise<McpServer[]> {
-    const mcpServers: McpServer[] = [];
+  async getMcpServers(): Promise<NacosMcpServer[]> {
+    const mcpServers: NacosMcpServer[] = [];
     try {
       const pageSize = 100;
       const pageNo = 1;
