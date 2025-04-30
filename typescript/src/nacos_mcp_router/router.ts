@@ -4,12 +4,33 @@ import { NacosHttpClient } from "./nacos_http_client";
 import { McpManager } from "./mcp_manager";
 import { logger } from "./logger";
 import { z } from "zod";
+import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types";
+import { ChromaDb, NacosMcpServer } from "./router_types";
 
 const MCP_SERVER_NAME = "nacos-mcp-router";
+
+interface RouterConfig {
+  nacos: {
+    serverAddr: string;
+    username: string;
+    password: string;
+  };
+  mcp: {
+    host: string;
+    port: number;
+    authToken?: string;
+  };
+}
+
+interface ServiceInfo {
+  name: string;
+  description: string;
+}
 
 export class Router {
   private nacosClient: NacosHttpClient;
   private mcpManager: McpManager;
+  private chromaDb: ChromaDb;
   private config: RouterConfig;
   private serviceCache: Map<string, ServiceInfo> = new Map();
   private updateInterval: NodeJS.Timeout | null = null;
@@ -17,8 +38,10 @@ export class Router {
 
   constructor(config: RouterConfig) {
     this.config = config;
-    this.nacosClient = new NacosHttpClient(config.nacos);
-    this.mcpManager = new McpManager(config.mcp);
+    const {serverAddr, username, password} = config.nacos;
+    this.nacosClient = new NacosHttpClient(serverAddr, username, password);
+    this.chromaDb = new ChromaDb();
+    this.mcpManager = new McpManager(this.nacosClient, this.chromaDb, 60000);
     this.mcpServer = new McpServer({
       name: MCP_SERVER_NAME,
       version: "1.0.0",
@@ -34,29 +57,109 @@ export class Router {
         { taskDescription: z.string(), keyWords: z.string().array().nonempty({
           message: "Can't be empty!",
         }).max(2) },
-        async () => {
-          // do something
+        async ({ taskDescription, keyWords }) => {
+          try {
+            const mcpServers1: NacosMcpServer[] = [];
+            
+            // 根据关键字搜索MCP服务器
+            // TODO: 这里的keywords是llm生成的，那么和向量库又有什么关系呢？
+            for (const keyWord of keyWords) {
+              const mcps = await this.mcpManager.searchMcpByKeyword(keyWord);
+              if (mcps.length > 0) {
+                mcpServers1.push(...mcps);
+              }
+            }
+
+            // 如果找到的服务器数量少于5个，使用任务描述进行从向量库补充搜索
+            if (mcpServers1.length < 5) {
+              const additionalServers = await this.mcpManager.getMcpServer(taskDescription, 5 - mcpServers1.length);
+              mcpServers1.push(...additionalServers);
+            }
+
+            // 构建结果
+            const result: Record<string, { name: string; description: string }> = {};
+            for (const mcpServer of mcpServers1) {
+              result[mcpServer.getName()] = {
+                name: mcpServer.getName(),
+                description: mcpServer.getDescription()
+              };
+            }
+
+            const content = JSON.stringify(result, null, 2);
+            const jsonString = `## 获取${taskDescription}的步骤如下：
+### 1. 当前可用的mcp server列表为：
+${content}
+### 2. 从当前可用的mcp server列表中选择你需要的mcp server调add_mcp_server工具安装mcp server`;
+
+            return {
+              content: [{
+                type: "text",
+                text: jsonString
+              }]
+            };
+          } catch (error) {
+            logger.warning(`failed to search_mcp_server: ${taskDescription}`, error);
+            return {
+              content: [{
+                type: "text",
+                text: `failed to search mcp server for ${taskDescription}`
+              }]
+            };
+          }
         }
       );
       this.mcpServer.tool(
         "UseTool",
         '',
         { mcpServerName: z.string(), toolName: z.string(), params: z.record(z.string(), z.any()) },
-        async () => {
-          // do something
+        async ({ mcpServerName, toolName, params }) => {
+          try {
+            const result = await this.mcpManager.useTool(mcpServerName, toolName, params);
+            return {
+              content: [{
+                type: "text",
+                text: JSON.stringify(result)
+              }]
+            };
+          } catch (error) {
+            logger.error(`Failed to use tool ${toolName} from server ${mcpServerName}:`, error);
+            return {
+              content: [{
+                type: "text",
+                text: `Failed to use tool ${toolName} from server ${mcpServerName}`
+              }]
+            };
+          }
         }
       );
       this.mcpServer.tool(
         "AddMcpServer",
         `安装指定的mcp server, return mcp server安装结果`,
         { mcpServerName: z.string() },
-        async () => {
-          // do something
+        async ({ mcpServerName }) => {
+          try {
+            const result = await this.mcpManager.addMcpServer(mcpServerName);
+            return {
+              content: [{
+                type: "text",
+                text: JSON.stringify(result)
+              }]
+            };
+          } catch (error) {
+            logger.error(`Failed to add mcp server ${mcpServerName}:`, error);
+            throw new McpError(ErrorCode.InternalError, `Failed to add mcp server ${mcpServerName}`);
+            // return {
+            //   content: [{
+            //     type: "text",
+            //     text: `Failed to add mcp server ${mcpServerName}`
+            //   }]
+            // };
+          }
         }
       );
     } catch (error) {
       logger.error("Failed to register MCP tools:", error);
-      // throw error;
+      throw new McpError(ErrorCode.InternalError, "Failed to register MCP tools:", error);
     }
   }
 

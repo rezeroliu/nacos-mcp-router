@@ -161,7 +161,7 @@ export class CustomServer {
   }
 }
 
-export class McpServer {
+export class NacosMcpServer {
   name: string;
   description: string;
   client: ClientSession;
