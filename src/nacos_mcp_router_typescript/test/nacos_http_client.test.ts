@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { NacosHttpClient } from '../src/nacos_http_client';
-import 'dotenv'
+// import 'dotenv'
 // import { NacosMcpServer } from '../src/router_types';
 // import { Tool } from '../src/types';
 
@@ -9,7 +9,7 @@ import 'dotenv'
 
 const nacosAddr = 'localhost:8848';
 const userName = 'nacos';
-const passwd = 'Ip7x9546iT';
+const passwd = 'P4vUkh2pyS';
 
 
 async function main() {

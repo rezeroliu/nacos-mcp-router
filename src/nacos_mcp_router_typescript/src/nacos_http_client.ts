@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import { NacosMcpServer } from './router_types';
 import { logger } from './logger';
 import { Tool } from './types';
@@ -8,6 +8,7 @@ export class NacosHttpClient {
   private readonly nacosAddr: string;
   private readonly userName: string;
   private readonly passwd: string;
+  private client: AxiosInstance;
 
   constructor(nacosAddr: string, userName: string, passwd: string) {
     if (!nacosAddr) {
@@ -23,26 +24,24 @@ export class NacosHttpClient {
     this.nacosAddr = nacosAddr;
     this.userName = userName;
     this.passwd = passwd;
-  }
 
-  private getBaseURL() {
-    return `http://${this.nacosAddr}`;
-  }
-
-  private getHeaders() {
-    return {
-      'Content-Type': 'application/json',
-      'charset': 'utf-8',
-      'userName': this.userName,
-      'password': this.passwd
-    };
+    this.client = axios.create({
+      baseURL: `http://${this.nacosAddr}`,
+      headers: {
+        'Content-Type': 'application/json',
+        'charset': 'utf-8',
+        'userName': this.userName,
+        'password': this.passwd
+      }
+    });
   }
 
   async getMcpServerByName(name: string): Promise<NacosMcpServer> {
-    const url = `${this.getBaseURL()}/nacos/v3/admin/ai/mcp?mcpName=${name}`;
+    const url = `/nacos/v3/admin/ai/mcp?mcpName=${name}`;
     const mcpServer = new NacosMcpServer(name, '', {});
+
     try {
-      const response = await axios.get(url, { headers: this.getHeaders() });
+      const response = await this.client.get(url);
       if (response.status === 200) {
         const data = response.data.data;
         const config = NacosMcpServerConfigImpl.fromDict(data);
@@ -57,12 +56,15 @@ export class NacosHttpClient {
           const endpoint = config.backendEndpoints[0];
           const httpSchema = endpoint.port === 443 ? 'https' : 'http';
           let url = `${httpSchema}://${endpoint.address}:${endpoint.port}${config.remoteServerConfig.exportPath}`;
+          
           if (!config.remoteServerConfig.exportPath.startsWith('/')) {
             url = `${httpSchema}://${endpoint.address}:${endpoint.port}/${config.remoteServerConfig.exportPath}`;
           }
+
           if (!server.agentConfig.mcpServers) {
             server.agentConfig.mcpServers = {};
           }
+
           server.agentConfig.mcpServers[server.name] = {
             name: server.name,
             description: server.description,
@@ -72,7 +74,7 @@ export class NacosHttpClient {
         return server;
       }
     } catch (error) {
-      logger.warn(`failed to get mcp server ${name}, response: ${error}`);
+      logger.warning(`failed to get mcp server ${name}, response: ${error}`);
     }
     return mcpServer;
   }
@@ -80,17 +82,20 @@ export class NacosHttpClient {
   async getMcpServersByPage(pageNo: number, pageSize: number): Promise<NacosMcpServer[]> {
     const mcpServers: NacosMcpServer[] = [];
     try {
-      const url = `${this.getBaseURL()}/nacos/v3/admin/ai/mcp/list?pageNo=${pageNo}&pageSize=${pageSize}`;
-      const response = await axios.get(url, { headers: this.getHeaders() });
+      const url = `/nacos/v3/admin/ai/mcp/list?pageNo=${pageNo}&pageSize=${pageSize}`;
+      const response = await this.client.get(url);
+
       if (response.status !== 200) {
-        logger.warn(`failed to get mcp server list response: ${response.data}`);
+        logger.warning(`failed to get mcp server list response: ${response.data}`);
         return [];
       }
+
       const data = response.data.data;
       for (const mcpServerDict of data.pageItems) {
         if (mcpServerDict.enabled) {
           const mcpName = mcpServerDict.name;
           const mcpServer = await this.getMcpServerByName(mcpName);
+
           if (mcpServer.description) {
             mcpServers.push(mcpServer);
           }
@@ -107,37 +112,17 @@ export class NacosHttpClient {
     try {
       const pageSize = 100;
       const pageNo = 1;
-      const url = `${this.getBaseURL()}/nacos/v3/admin/ai/mcp/list?pageNo=${pageNo}&pageSize=${pageSize}`;
-      // const response = await axios.get(url, { headers: this.getHeaders() });
-      // const config = {
-      //   method: 'GET',
-      //   url: url,
-      //   headers: this.getHeaders(),
-      //   // maxBodyLength: Infinity,
-      //   // maxContentLength: Infinity
-      // }
-      // console.log(JSON.stringify(config));
-      // const response = await axios.request(config);
-
-      let config = {
-        method: 'get',
-        // maxBodyLength: Infinity,
-        url: url,
-        headers: { 
-          'Content-Type': 'application/json', 
-          'charset': 'utf-8', 
-          'userName': process.env.NACOS_USERNAME, 
-          'password': process.env.NACOS_PASSWORD
-        },
-      };
-    
-      const response = await axios.request(config)      
+      const url = `/nacos/v3/admin/ai/mcp/list?pageNo=${pageNo}&pageSize=${pageSize}`;
+      
+      const response = await this.client.get(url);
       if (response.status !== 200) {
-        logger.warn(`failed to get mcp server list, url ${url}, response: ${response.data}`);
+        logger.warning(`failed to get mcp server list, url ${url}, response: ${response.data}`);
         return [];
       }
+
       const totalCount = response.data.data.totalCount;
       const totalPages = Math.ceil(totalCount / pageSize);
+
       for (let i = 1; i <= totalPages; i++) {
         const mcps = await this.getMcpServersByPage(i, pageSize);
         mcpServers.push(...mcps);
@@ -150,8 +135,9 @@ export class NacosHttpClient {
 
   async updateMcpTools(mcpName: string, tools: Tool[]): Promise<boolean> {
     try {
-      const url = `${this.getBaseURL()}/nacos/v3/admin/ai/mcp?mcpName=${mcpName}`;
-      const response = await axios.get(url, { headers: this.getHeaders() });
+      const url = `/nacos/v3/admin/ai/mcp?mcpName=${mcpName}`;
+      const response = await this.client.get(url);
+
       if (response.status === 200) {
         const data = response.data.data;
         const toolList = tools.map(tool => ({
@@ -159,26 +145,33 @@ export class NacosHttpClient {
           description: tool.description,
           inputSchema: tool.inputSchema
         }));
+
         const endpointSpecification: Record<string, any> = {};
         if (data.protocol !== 'stdio') {
           endpointSpecification.data = data.remoteServerConfig.serviceRef;
           endpointSpecification.type = 'REF';
         }
+
         if (!data.toolSpec) {
           data.toolSpec = {};
         }
+
         data.toolSpec.tools = toolList;
         const params: Record<string, any> = {
           mcpName: mcpName
         };
+
         const toolSpecification = data.toolSpec;
         delete data.toolSpec;
         delete data.backendEndpoints;
+
         params.serverSpecification = JSON.stringify(data);
         params.endpointSpecification = JSON.stringify(endpointSpecification);
         params.toolSpecification = JSON.stringify(toolSpecification);
+
         logger.info(`update mcp tools, params ${JSON.stringify(params)}`);
-        const updateUrl = `${this.getBaseURL()}/nacos/v3/admin/ai/mcp?`;
+
+        const updateUrl = `http://${this.nacosAddr}/nacos/v3/admin/ai/mcp?`;
         const updateResponse = await axios.put(updateUrl, params, {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -187,14 +180,15 @@ export class NacosHttpClient {
             'password': this.passwd
           }
         });
+
         if (updateResponse.status === 200) {
           return true;
         } else {
-          logger.warn(`failed to update mcp tools list, caused: ${updateResponse.data}`);
+          logger.warning(`failed to update mcp tools list, caused: ${updateResponse.data}`);
           return false;
         }
       } else {
-        logger.warn(`failed to update mcp tools list, caused: ${response.data}`);
+        logger.warning(`failed to update mcp tools list, caused: ${response.data}`);
         return false;
       }
     } catch (error) {
