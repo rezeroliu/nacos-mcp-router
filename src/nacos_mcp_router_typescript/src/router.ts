@@ -4,12 +4,12 @@ import { NacosHttpClient } from "./nacos_http_client";
 import { McpManager } from "./mcp_manager";
 import { logger } from "./logger";
 import { z } from "zod";
-import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types";
+import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
 import { ChromaDb, NacosMcpServer } from "./router_types";
 
 const MCP_SERVER_NAME = "nacos-mcp-router";
 
-interface RouterConfig {
+export interface RouterConfig {
   nacos: {
     serverAddr: string;
     username: string;
@@ -62,7 +62,6 @@ export class Router {
             const mcpServers1: NacosMcpServer[] = [];
             
             // 根据关键字搜索MCP服务器
-            // TODO: 这里的keywords是llm生成的，那么和向量库又有什么关系呢？
             for (const keyWord of keyWords) {
               const mcps = await this.mcpManager.searchMcpByKeyword(keyWord);
               if (mcps.length > 0) {
@@ -98,7 +97,7 @@ ${content}
               }]
             };
           } catch (error) {
-            logger.warning(`failed to search_mcp_server: ${taskDescription}`, error);
+            logger.warn(`failed to search_mcp_server: ${taskDescription}`, error);
             return {
               content: [{
                 type: "text",
@@ -110,7 +109,7 @@ ${content}
       );
       this.mcpServer.tool(
         "UseTool",
-        '',
+        '使用指定MCP服务器上的工具。需要先通过AddMcpServer安装MCP服务器，然后才能使用其工具。',
         { mcpServerName: z.string(), toolName: z.string(), params: z.record(z.string(), z.any()) },
         async ({ mcpServerName, toolName, params }) => {
           try {

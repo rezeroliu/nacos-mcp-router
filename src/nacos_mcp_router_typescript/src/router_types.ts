@@ -4,8 +4,8 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { logger } from './logger';
 import { ChromaClient, Collection, Document, Documents, Embeddings, ID, IDs, IncludeEnum, Metadata, Metadatas } from 'chromadb';
 import { NacosMcpServerConfigImpl } from './nacos_mcp_server_config';
-import { Transport } from '@modelcontextprotocol/sdk/shared/transport';
-import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types";
+import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
+import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
 
 function _stdioTransportContext(config: Record<string, any>): StdioClientTransport {
   return new StdioClientTransport({
@@ -72,7 +72,7 @@ export class CustomServer {
 
   //     await this.waitForShutdownRequest();
   //   } catch (e) {
-  //     logger.warning(
+  //     logger.warn(
   //       `failed to init mcp server ${this.name}, config: ${JSON.stringify(this.config)}`,
   //       e
   //     );
@@ -162,7 +162,7 @@ export class CustomServer {
           throw e;
         }
 
-        logger.warning(
+        logger.warn(
           `Tool execution failed for ${toolName} on server ${this.name}, attempt ${attempt}/${retries}`,
           e
         );
@@ -269,6 +269,7 @@ export class ChromaDb {
     this.dbClient.getOrCreateCollection({
       name: this._collectionId
     }).then((collection) => {
+      logger.info(`ChromaDB collection created: ${this._collectionId}`);
       this._collection = collection;
     })
   }

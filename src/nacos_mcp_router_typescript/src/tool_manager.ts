@@ -23,7 +23,6 @@ export class ToolManager {
       
       // 加载新工具
       const toolsArray = Array.isArray(config) ? config : [config];
-      console.log(toolsArray);
       for (const tool of toolsArray) {
         if (this.tools.has(tool.name)) {
           throw new McpError(ErrorCode.InvalidRequest, `重复的工具名称: ${tool.name}`);

@@ -6,8 +6,9 @@
   "scripts": {
     "build": "tsc",
     "start": "ts-node src/index.ts",
-    "dev": "ts-node-dev --respawn src/index.ts",
-    "test": "jest"
+    "dev": "npx ts-node-dev --respawn src/index.ts",
+    "test": "jest",
+    "debug": "npx @modelcontextprotocol/inspector npx ts-node src/index.ts"
   },
   "keywords": [],
   "author": "",

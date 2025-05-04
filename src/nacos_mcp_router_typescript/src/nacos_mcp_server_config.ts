@@ -215,6 +215,7 @@ export interface NacosMcpServerConfig {
   capabilities: string[];
   backendEndpoints: BackendEndpoint[];
   toolSpec: ToolSpec;
+  getToolDescription(): string;
 }
 
 export class NacosMcpServerConfigImpl implements NacosMcpServerConfig {
@@ -271,7 +272,7 @@ export class NacosMcpServerConfigImpl implements NacosMcpServerConfig {
         toolSpecData ? ToolSpecImpl.fromDict(toolSpecData) : new ToolSpecImpl([], {})
       );
     } catch (error) {
-      logger.warning(`failed to parse NacosMcpServerConfig from data: ${JSON.stringify(data)}`, error);
+      logger.warn(`failed to parse NacosMcpServerConfig from data: ${JSON.stringify(data)}`, error);
       throw new Error('failed to parse NacosMcpServerConfig from data');
     }
   }
@@ -281,12 +282,12 @@ export class NacosMcpServerConfigImpl implements NacosMcpServerConfig {
   }
 
   getToolDescription(): string {
-    let description = this.description || '';
+    let des = this.description || '';
     for (const tool of this.toolSpec.tools) {
       if (tool.description) {
-        description += '\n' + tool.description;
+        des += '\n' + tool.description;
       }
     }
-    return description;
+    return des;
   }
 }

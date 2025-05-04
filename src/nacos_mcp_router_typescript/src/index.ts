@@ -1,4 +1,4 @@
-import { Router } from './router';
+import { Router, RouterConfig } from './router';
 import { logger } from './logger';
 
 const config = {
@@ -20,8 +20,8 @@ const config = {
 async function main() {
   try {
     const router = new Router(config as RouterConfig);
-    router.start();
-    // await router.start();
+    // router.start();
+    await router.start();
     logger.info('Nacos MCP Router started successfully');
   } catch (error) {
     logger.error('Failed to start Nacos MCP Router:', error);

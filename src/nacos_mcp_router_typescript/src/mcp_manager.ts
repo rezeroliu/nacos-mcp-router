@@ -2,7 +2,7 @@ import { logger } from "./logger";
 import { NacosHttpClient } from "./nacos_http_client";
 import { ChromaDb, CustomServer, NacosMcpServer } from "./router_types";
 import { md5 } from "./md5";
-import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types";
+import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
 
 export class McpManager {
   private nacosClient: NacosHttpClient;
@@ -20,6 +20,8 @@ export class McpManager {
     this.nacosClient = nacosClient;
     this.chromaDbService = chromaDbService;
     this.update_interval = update_interval;
+    this.updateNow();
+    this.asyncUpdater();
   }
 
   private async updateNow(): Promise<void> {
@@ -171,7 +173,7 @@ export class McpManager {
     }
 
     if (!this.healthyMcpServers.has(mcpServerName)) {
-      const env = process.env || {};
+      const env: any = process.env || {};
       if (!mcpServer.agentConfig) {
         mcpServer.agentConfig = {};
       }
