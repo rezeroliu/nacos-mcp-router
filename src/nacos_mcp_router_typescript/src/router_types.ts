@@ -3,7 +3,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { logger } from './logger';
 import { ChromaClient, Collection, Document, Documents, Embeddings, ID, IDs, IncludeEnum, Metadata, Metadatas } from 'chromadb';
-import { NacosMcpServerConfig } from './nacos_mcp_server_config';
+import { NacosMcpServerConfigImpl } from './nacos_mcp_server_config';
 import { Transport } from '@modelcontextprotocol/sdk/shared/transport';
 import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types";
 
@@ -200,7 +200,7 @@ export class CustomServer {
 export class NacosMcpServer {
   name: string;
   description: string;
-  mcpConfigDetail: NacosMcpServerConfig | null;
+  mcpConfigDetail: NacosMcpServerConfigImpl | null;
   agentConfig: Record<string, any>;
 
   constructor(name: string, description: string, agentConfig: Record<string, any>) {
@@ -279,13 +279,13 @@ export class ChromaDb {
 
   updateData(
     ids: IDs,
-    metadatas: Metadatas,
-    documents: Documents
+    metadatas?: Metadatas,
+    documents?: Documents
   ): void {
     this._collection!.upsert({
-      documents,
-      metadatas,
-      ids
+      ids,
+      documents: documents || [],
+      metadatas: metadatas || []
     });
   }
 

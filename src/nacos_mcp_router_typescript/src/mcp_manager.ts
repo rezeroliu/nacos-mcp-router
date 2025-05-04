@@ -1,6 +1,5 @@
 import { logger } from "./logger";
 import { NacosHttpClient } from "./nacos_http_client";
-import { Collection } from "chromadb";
 import { ChromaDb, CustomServer, NacosMcpServer } from "./router_types";
 import { md5 } from "./md5";
 import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types";
@@ -63,10 +62,10 @@ export class McpManager {
       this._cache = cache;
 
       if (ids.length > 0) {
-        await this.chromaDbService.update({
-          documents: docs,
-          ids: ids,
-        });
+        await this.chromaDbService.updateData(
+          ids,
+          docs as any,
+        );
       }
     } catch (error) {
       logger.error("Failed to update MCP servers:", error);
