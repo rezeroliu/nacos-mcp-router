@@ -30,25 +30,25 @@ console.log(res2);
 
 // console.log(res4);
 
-let config = {
-    method: 'get',
-    // maxBodyLength: Infinity,
-    url: 'http://localhost:8848/nacos/v3/admin/ai/mcp/list?pageNo=1&pageSize=100',
-    headers: { 
-      'Content-Type': 'application/json', 
-      'charset': 'utf-8', 
-      'userName': 'nacos', 
-      'password': 'P4vUkh2pyS'
-    }
-  };
+// let config = {
+//     method: 'get',
+//     // maxBodyLength: Infinity,
+//     url: 'http://localhost:8848/nacos/v3/admin/ai/mcp/list?pageNo=1&pageSize=100',
+//     headers: { 
+//       'Content-Type': 'application/json', 
+//       'charset': 'utf-8', 
+//       'userName': 'nacos', 
+//       'password': 'P4vUkh2pyS'
+//     }
+//   };
 
-  axios.request(config)
-  .then((response) => {
-    console.log(JSON.stringify(response.data));
-  })
-  .catch((error) => {
-    console.log(error);
-  });
+//   axios.request(config)
+//   .then((response) => {
+//     console.log(JSON.stringify(response.data));
+//   })
+//   .catch((error) => {
+//     console.log(error);
+//   });
 }
 
 main();

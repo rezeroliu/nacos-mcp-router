@@ -3,6 +3,7 @@ import { NacosMcpServer } from './router_types';
 import { logger } from './logger';
 import { Tool } from './types';
 import { NacosMcpServerConfigImpl } from './nacos_mcp_server_config';
+import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
 
 export class NacosHttpClient {
   private readonly nacosAddr: string;
@@ -129,6 +130,7 @@ export class NacosHttpClient {
       }
     } catch (error) {
       logger.error('Error getting mcp servers:', error);
+      throw new McpError(ErrorCode.InternalError, 'Failed to get mcp servers')
     }
     return mcpServers;
   }
