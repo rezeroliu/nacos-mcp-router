@@ -89,10 +89,10 @@ export class McpManager {
 
   async getMcpServer(queryTexts: string, count: number): Promise<NacosMcpServer[]> {
     try {
-      const result = await this.chromaDbService.query({
-        queryTexts: queryTexts,
-        nResults: count,
-      });
+      const result = await this.chromaDbService.query(
+        queryTexts,
+        count,
+      );
       const ids = result.ids;
       const mcpServers: NacosMcpServer[] = [];
 
@@ -195,7 +195,8 @@ export class McpManager {
       }
 
       const server = new CustomServer(mcpServerName, mcpServer.agentConfig);
-      await server.waitForInitialization();
+      // await server.waitForInitialization();
+      await server.start();
       if (server.healthy()) {
         this.healthyMcpServers.set(mcpServerName, server);
       }

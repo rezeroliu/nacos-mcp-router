@@ -1,22 +1,11 @@
-import { ClientSession } from 'mcp';
-import { sseClient } from 'mcp/client/sse';
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { getDefaultEnvironment, StdioServerParameters, stdioClient } from 'mcp/client/stdio';
-import { AsyncExitStack } from 'contextlib';
 import { logger } from './logger';
-import { ChromaClient, Collection, Settings } from 'chromadb';
-import { OneOrMany, ID, Document, GetResult, QueryResult } from 'chromadb/api/types';
-import * as path from 'path';
-import * as os from 'os';
+import { ChromaClient, Collection, Document, Documents, Embeddings, ID, IDs, IncludeEnum, Metadata, Metadatas } from 'chromadb';
 import { NacosMcpServerConfig } from './nacos_mcp_server_config';
 import { Transport } from '@modelcontextprotocol/sdk/shared/transport';
-
-type TransportContext = {
-  read: any;
-  write: any;
-};
+import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types";
 
 function _stdioTransportContext(config: Record<string, any>): StdioClientTransport {
   return new StdioClientTransport({
@@ -36,24 +25,12 @@ function _sseTransportContext(config: Record<string, any>): SSEClientTransport {
 export class CustomServer {
   private name: string;
   private config: Record<string, any>;
-  private stdioContext: any | null = null;
-  private session: ClientSession | null = null;
-  private _cleanupLock: Promise<void> = Promise.resolve();
-  private exitStack: AsyncExitStack = new AsyncExitStack();
-  private _initializedEvent: Promise<void> = Promise.resolve();
-  private _shutdownEvent: Promise<void> = Promise.resolve();
   private _transportContextFactory: (config: Record<string, any>) => Transport;
-  private _serverTask: Promise<void>;
-  private _initialized: boolean = false;
-  private sessionInitializedResponse: any;
   private client: Client;
 
   constructor(name: string, config: Record<string, any>) {
     this.name = name;
     this.config = config;
-    this._cleanupLock = new Promise<void>(resolve => resolve());
-    this._initializedEvent = new Promise<void>(resolve => resolve());
-    this._shutdownEvent = new Promise<void>(resolve => resolve());
 
     logger.info(`mcp server config: ${JSON.stringify(config)}`);
 
@@ -67,11 +44,11 @@ export class CustomServer {
       version: '1.0.0'
     })
 
-    this.start()
+    // this.start()
   }
 
-  public start() {
-    this.client.connect(this._transportContextFactory(this.config))
+  public async start() {
+    await this.client.connect(this._transportContextFactory(this.config))
   }
 
   // private async _serverLifespanCycle(): Promise<void> {
@@ -131,25 +108,33 @@ export class CustomServer {
     }
   }
 
-  async waitForInitialization(): Promise<void> {
-    await this._initializedEvent;
-  }
+  // async waitForInitialization(): Promise<void> {
+  //   await this._initializedEvent;
+  // }
 
   async requestForShutdown(): Promise<void> {
-    this._shutdownEvent = Promise.resolve();
+    // this._shutdownEvent = Promise.resolve();
+    await this.client.close();
   }
 
-  async waitForShutdownRequest(): Promise<void> {
-    await this._shutdownEvent;
-  }
+  // async waitForShutdownRequest(): Promise<void> {
+  //   await this._shutdownEvent;
+  // }
 
-  async listTools(): Promise<any[]> {
-    if (!this.session) {
-      throw new Error(`Server ${this.name} is not initialized`);
-    }
-
-    const toolsResponse = await this.session.listTools();
-    return toolsResponse.tools;
+  async listTools(): Promise<any[]> {  
+    if (!this.client || !this.healthy()) {  
+      throw new Error(`Server ${this.name} is not initialized`);  
+    }  
+    
+    try {  
+      // Use the client.listTools() method which is a convenience wrapper  
+      // around client.request() for the tools/list endpoint  
+      const toolsResult = await this.client.listTools();  
+      return toolsResult.tools;  
+    } catch (e) {  
+      logger.error(`Failed to list tools for server ${this.name}:`, e);  
+      throw e;  
+    }  
   }
 
   async executeTool(
@@ -168,9 +153,9 @@ export class CustomServer {
           method: 'tools/call',
           params: {
             name: toolName,
-            arguments: params
+            ...params
           }
-        });
+        }, CallToolResultSchema);
         return result;
       } catch (e) {
         if (attempt >= retries) {
@@ -190,7 +175,6 @@ export class CustomServer {
           logger.info(`Reconnecting to server ${this.name} before retry`);
           const transport = this._transportContextFactory(this.config.mcpServers[this.name]);
           await this.client.connect(transport);
-          this._initialized = true;
         }
 
         // Recursive retry
@@ -201,30 +185,29 @@ export class CustomServer {
     return executeWithRetry(1);
   }
 
-  async cleanup(): Promise<void> {
-    await this._cleanupLock;
-    try {
-      await this.exitStack.aclose();
-      this.session = null;
-      this.stdioContext = null;
-    } catch (e) {
-      console.error(`Error during cleanup of server ${this.name}:`, e);
-    }
-  }
+  // async cleanup(): Promise<void> {
+  //   await this._cleanupLock;
+  //   try {
+  //     await this.exitStack.aclose();
+  //     this.session = null;
+  //     this.stdioContext = null;
+  //   } catch (e) {
+  //     console.error(`Error during cleanup of server ${this.name}:`, e);
+  //   }
+  // }
 }
 
 export class NacosMcpServer {
   name: string;
   description: string;
-  client: ClientSession;
-  session: ClientSession;
-  mcpConfigDetail: NacosMcpServerConfig;
+  mcpConfigDetail: NacosMcpServerConfig | null;
   agentConfig: Record<string, any>;
 
   constructor(name: string, description: string, agentConfig: Record<string, any>) {
     this.name = name;
     this.description = description;
     this.agentConfig = agentConfig;
+    this.mcpConfigDetail = null;
   }
 
   getName(): string {
@@ -248,48 +231,72 @@ export class NacosMcpServer {
   }
 }
 
+type SingleQueryResponse = {
+  ids: IDs;
+  embeddings: Embeddings | null;
+  documents: (Document | null)[];
+  metadatas: (Metadata | null)[];
+  distances: number[] | null;
+  included: IncludeEnum[];
+};
+type MultiQueryResponse = {
+  ids: IDs[];
+  embeddings: Embeddings[] | null;
+  documents: (Document | null)[][];
+  metadatas: (Metadata | null)[][];
+  distances: number[][] | null;
+  included: IncludeEnum[];
+};
+
+type MultiGetResponse = {
+  ids: IDs;
+  embeddings: Embeddings | null;
+  documents: (Document | null)[];
+  metadatas: (Metadata | null)[];
+  included: IncludeEnum[];
+};
+type GetResponse = MultiGetResponse;
+
 export class ChromaDb {
   private dbClient: ChromaClient;
   private _collectionId: string;
-  private _collection: Collection;
-  private preIds: string[] = [];
+  private _collection: Collection | undefined;
 
   constructor() {
-    const dbPath = path.join(os.homedir(), '.nacos_mcp_router', 'chroma_db');
-    this.dbClient = new ChromaClient({
-      path: dbPath,
-      settings: new Settings({
-        anonymizedTelemetry: false
-      })
-    });
+    // const dbPath = path.join(os.homedir(), '.nacos_mcp_router', 'chroma_db');
+    this.dbClient = new ChromaClient();
     this._collectionId = `nacos_mcp_router-collection-${process.pid}`;
-    this._collection = this.dbClient.getOrCreateCollection(this._collectionId);
+    this.dbClient.getOrCreateCollection({
+      name: this._collectionId
+    }).then((collection) => {
+      this._collection = collection;
+    })
   }
 
-  getCollectionCount(): number {
-    return this._collection.count();
+  async getCollectionCount(): Promise<number> {
+    return await this._collection!.count();
   }
 
   updateData(
-    ids: OneOrMany<ID>,
-    metadatas?: OneOrMany<Record<string, any>> | null,
-    documents?: OneOrMany<Document> | null
+    ids: IDs,
+    metadatas: Metadatas,
+    documents: Documents
   ): void {
-    this._collection.upsert({
+    this._collection!.upsert({
       documents,
       metadatas,
       ids
     });
   }
 
-  query(query: string, count: number): QueryResult {
-    return this._collection.query({
+  query(query: string, count: number): Promise<MultiQueryResponse> {
+    return this._collection!.query({
       queryTexts: [query],
       nResults: count
     });
   }
 
-  get(id: string[]): GetResult {
-    return this._collection.get({ ids: id });
+  get(id: string[]): Promise<GetResponse> {
+    return this._collection!.get({ ids: id });
   }
 }
