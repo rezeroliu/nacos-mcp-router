@@ -40,15 +40,16 @@ export class CustomServer {
 
     // 全局保持一个client 切换连接？
     this.client = new Client({
-      name: config.name,
+      name: this.name,
       version: '1.0.0'
     })
 
     // this.start()
   }
 
-  public async start() {
-    await this.client.connect(this._transportContextFactory(this.config))
+  public async start(mcpServerName: string) {
+    const transport = this._transportContextFactory(this.config.mcpServers[mcpServerName]);
+    this.client.connect(transport)
   }
 
   // private async _serverLifespanCycle(): Promise<void> {
@@ -153,10 +154,11 @@ export class CustomServer {
           method: 'tools/call',
           params: {
             name: toolName,
-            ...params
+            arguments: params
           }
         }, CallToolResultSchema);
         return result;
+        // "Error: Cannot destructure property 'address' of 'request.params.arguments' as it is undefined."
       } catch (e) {
         if (attempt >= retries) {
           throw e;

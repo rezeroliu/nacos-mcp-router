@@ -145,7 +145,14 @@ export class McpManager {
     }
 
     if (mcpServer.healthy()) {
-      const response = await mcpServer.executeTool(toolName, params);
+      const enrichedParams = {
+        ...params,
+        // clientInfo: {
+        //   name: mcpServerName,
+        //   ...params.clientInfo
+        // }
+      };
+      const response = await mcpServer.executeTool(toolName, enrichedParams);
       return response.content;
     } else {
       this.healthyMcpServers.delete(mcpServerName);
@@ -197,7 +204,7 @@ export class McpManager {
 
       const server = new CustomServer(mcpServerName, mcpServer.agentConfig);
       // await server.waitForInitialization();
-      await server.start();
+      await server.start(mcpServerName);
       if (server.healthy()) {
         this.healthyMcpServers.set(mcpServerName, server);
       }
