@@ -264,7 +264,7 @@ export class ChromaDb {
 
   constructor() {
     // const dbPath = path.join(os.homedir(), '.nacos_mcp_router', 'chroma_db');
-    this.dbClient = new ChromaClient();
+    this.dbClient = new ChromaClient({path: 'http://localhost:8000'});
     this._collectionId = `nacos_mcp_router-collection-${process.pid}`;
     this.dbClient.getOrCreateCollection({
       name: this._collectionId
@@ -280,13 +280,13 @@ export class ChromaDb {
 
   updateData(
     ids: IDs,
+    documents?: Documents,
     metadatas?: Metadatas,
-    documents?: Documents
   ): void {
     this._collection!.upsert({
       ids,
       documents: documents || [],
-      metadatas: metadatas || []
+      metadatas: metadatas
     });
   }
 

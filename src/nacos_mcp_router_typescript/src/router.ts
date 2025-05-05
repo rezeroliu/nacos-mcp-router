@@ -6,6 +6,8 @@ import { logger } from "./logger";
 import { z } from "zod";
 import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
 import { ChromaDb, NacosMcpServer } from "./router_types";
+// import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 
 const MCP_SERVER_NAME = "nacos-mcp-router";
 
@@ -157,10 +159,14 @@ ${content}
     }
   }
 
-  public async start() {
+  public async start(replaceTransport?: Transport) {
     try {
       const transport = new StdioServerTransport();
-      await this.mcpServer!.connect(transport);
+      if (replaceTransport) {
+        this.mcpServer!.connect(replaceTransport);
+      } else {
+        await this.mcpServer!.connect(transport);
+      }
     } catch (error) {
       logger.error("Failed to start Nacos MCP Router:", error);
       // throw error;

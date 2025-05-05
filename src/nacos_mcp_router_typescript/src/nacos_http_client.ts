@@ -130,7 +130,7 @@ export class NacosHttpClient {
       }
     } catch (error) {
       logger.error('Error getting mcp servers:', error);
-      throw new McpError(ErrorCode.InternalError, 'Failed to get mcp servers')
+      throw new McpError(ErrorCode.InternalError, `Failed to get mcp servers: ${error}`)
     }
     return mcpServers;
   }

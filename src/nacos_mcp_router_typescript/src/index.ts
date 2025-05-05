@@ -1,9 +1,9 @@
 import { Router, RouterConfig } from './router';
 import { logger } from './logger';
 
-const config = {
+export const config = {
   nacos: {
-    serverAddr: process.env.NACOS_SERVER_ADDR || 'http://localhost:8848',
+    serverAddr: process.env.NACOS_SERVER_ADDR || 'localhost:8848',
     // namespace: process.env.NACOS_NAMESPACE || 'public',
     // group: process.env.NACOS_GROUP || 'DEFAULT_GROUP',
     // dataId: process.env.NACOS_DATA_ID || 'nacos-mcp-router',
@@ -29,4 +29,4 @@ async function main() {
   }
 }
 
-main();
+// main();
