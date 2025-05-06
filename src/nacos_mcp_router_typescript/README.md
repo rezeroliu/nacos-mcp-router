@@ -18,6 +18,8 @@
 
 - Node.js 16+
 - Nacos 服务端
+- Chromadb 服务端
+> - 启动方式参考 [Chromadb 官方文档](https://docs.trychroma.com/docs/run-chroma/client-server?lang=typescript)
 
 ### 安装依赖
 
