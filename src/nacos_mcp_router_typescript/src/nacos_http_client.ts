@@ -1,8 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { NacosMcpServer } from './router_types';
 import { logger } from './logger';
-import { Tool } from './types';
-import { NacosMcpServerConfigImpl } from './nacos_mcp_server_config';
+import { NacosMcpServerConfigImpl, Tool } from './nacos_mcp_server_config';
 import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
 
 export class NacosHttpClient {

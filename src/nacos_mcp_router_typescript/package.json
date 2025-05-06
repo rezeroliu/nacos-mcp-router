@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc",
     "start": "ts-node src/index.ts",
-    "dev": "npx ts-node-dev --respawn src/index.ts",
+    "dev-studio": "npx ts-node src/index.ts",
+    "dev-sse": "npx ts-node src/simpleSseServer.ts",
     "test": "jest",
     "debug": "npx @modelcontextprotocol/inspector npx ts-node src/index.ts"
   },
@@ -19,6 +20,7 @@
     "axios": "^1.9.0",
     "chromadb": "^2.3.0",
     "chromadb-default-embed": "^2.14.0",
+    "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3",
