@@ -74,7 +74,7 @@ class NacosHttpClient:
             jsonObj = json.loads(response.content.decode("utf-8"))
             data = jsonObj['data']
             for mcp_server_dict in data['pageItems']:
-                if mcp_server_dict["enabled"]:
+                if mcp_server_dict["enabled"] and (mcp_server_dict["protocol"] == "mcp-sse" or mcp_server_dict["protocol"] == "stdio") :
                     mcp_name = mcp_server_dict["name"]
                     mcpServer = self.get_mcp_server_by_name(mcp_name)
 
@@ -83,6 +83,7 @@ class NacosHttpClient:
                     mcpServers.append(mcpServer)
             return mcpServers
         except Exception as e:
+            NacosMcpRouteLogger.get_logger().warning("failed to get mcp server list", exc_info=e)
             return mcpServers
 
     def get_mcp_servers(self) -> list[McpServer]:
@@ -98,7 +99,7 @@ class NacosHttpClient:
             response = httpx.get(url, headers=headers)
             if response.status_code != 200:
                 NacosMcpRouteLogger.get_logger().warning(
-                    "failed to get mcp server list, url {},  response  {}".format(url, response.content))
+                    "failed to get mcp server list, url {},  response  {}".format(url, response.content.decode("utf-8")))
                 return []
 
             jsonObj = json.loads(response.content.decode("utf-8"))
