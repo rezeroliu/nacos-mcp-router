@@ -308,10 +308,24 @@ export class ChromaDb {
 
     if (hasCmd("uv")) {
       logger.info("使用 uv 安装 chromadb ...");
-      execSync("uv pip install chromadb", { stdio: "ignore" });
+      try {
+        execSync("uv pip install chromadb --system", { stdio: "pipe" });
+      } catch (error: any) {
+        logger.error(`uv pip install chromadb 失败: ${error.message}`);
+        if (error.stdout) logger.info(`stdout: ${error.stdout.toString()}`);
+        if (error.stderr) logger.error(`stderr: ${error.stderr.toString()}`);
+        throw error;
+      }
     } else if (hasCmd("pip")) {
       logger.info("使用 pip 安装 chromadb ...");
-      execSync("pip install chromadb", { stdio: "ignore" });
+      try {
+        execSync("pip install chromadb", { stdio: "pipe" });
+      } catch (error: any) {
+        logger.error(`pip install chromadb 失败: ${error.message}`);
+        if (error.stdout) logger.info(`stdout: ${error.stdout.toString()}`);
+        if (error.stderr) logger.error(`stderr: ${error.stderr.toString()}`);
+        throw error;
+      }
     } else {
       throw new Error("未检测到 pip 或 uv，请先安装其中之一再运行本程序。");
     }
