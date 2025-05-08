@@ -8,7 +8,6 @@ import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
 import { ChromaDb, NacosMcpServer } from "./router_types";
 // import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
-import { DefaultEmbeddingFunction } from "chromadb";
 
 const MCP_SERVER_NAME = "nacos-mcp-router";
 
@@ -161,35 +160,35 @@ ${content}
 
   public async start(replaceTransport?: Transport) {
     try {
-      const modelName = "all-MiniLM-L6-v2";
-      const defaultEF = new DefaultEmbeddingFunction({ model: modelName });
-      console.log(`defaultEF: ${defaultEF}`);
+      const { env } = await import("chromadb-default-embed");
+      (env as any).remoteHost = "https://hf-mirror.com";
 
       this.chromaDb = new ChromaDb();
       await this.chromaDb.start();
       await this.chromaDb.isReady();
-      console.log(`chromaDb is ready, collectionId: ${this.chromaDb._collectionId}`);
+      logger.info(`chromaDb is ready, collectionId: ${this.chromaDb._collectionId}`);
       await this.nacosClient.isReady();
+      logger.info(`nacosClient is ready`);
       this.mcpManager = new McpManager(this.nacosClient, this.chromaDb, 60000);
       this.mcpServer = new McpServer({
         name: MCP_SERVER_NAME,
         version: "1.0.0",
       });
 
-      const retryCount = 3;
-      const retryFn = async (count: number) => {
-        const isReady = await this.mcpManager!.isReady();
-        if (!isReady) {
-          if (count > retryCount) {
-            throw new McpError(ErrorCode.InternalError, "MCP manager not initialized");
-          }
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          await retryFn(count + 1);
-        }
-      }
+      // const retryCount = 3;
+      // const retryFn = async (count: number) => {
+      //   const isReady = await this.mcpManager!.isReady();
+      //   if (!isReady) {
+      //     if (count > retryCount) {
+      //       throw new McpError(ErrorCode.InternalError, "MCP manager not initialized");
+      //     }
+      //     await new Promise(resolve => setTimeout(resolve, 1000));
+      //     await retryFn(count + 1);
+      //   }
+      // }
 
-      await retryFn(0);
-
+      // await retryFn(0);
+      logger.info(`registerMcpTools`);
       this.registerMcpTools();
       const transport = new StdioServerTransport();
       if (replaceTransport) {

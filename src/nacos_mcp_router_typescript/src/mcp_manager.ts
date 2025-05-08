@@ -24,10 +24,6 @@ export class McpManager {
     this.asyncUpdater();
   }
 
-  public async isReady(): Promise<boolean> {
-    return await this.chromaDbService.isReady() && await this.nacosClient.isReady();
-  }
-
   private async updateNow(): Promise<void> {
     try {
       const mcpServers = await this.nacosClient.getMcpServers();
@@ -151,10 +147,6 @@ export class McpManager {
     if (mcpServer.healthy()) {
       const enrichedParams = {
         ...params,
-        // clientInfo: {
-        //   name: mcpServerName,
-        //   ...params.clientInfo
-        // }
       };
       const response = await mcpServer.executeTool(toolName, enrichedParams);
       return response.content;

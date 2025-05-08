@@ -10,7 +10,8 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
     "jsx": "preserve",
     "baseUrl": ".",
     "paths": {

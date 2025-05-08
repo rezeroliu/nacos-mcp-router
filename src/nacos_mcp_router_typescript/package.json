@@ -4,12 +4,13 @@
   "description": "Nacos MCP Router TypeScript implementation",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
-    "start": "ts-node src/studio.ts",
-    "dev-studio": "ts-node src/studio.ts",
+    "build": "rimraf dist && tsc",
+    "build:watch": "tsc -w",
+    "start": "ts-node src/stdio.ts",
+    "dev-stdio": "ts-node src/stdio.ts",
     "dev-sse": "ts-node src/simpleSseServer.ts",
     "test": "jest",
-    "debug": "npx @modelcontextprotocol/inspector npx ts-node src/index.ts"
+    "debug": "npx @modelcontextprotocol/inspector npx ts-node src/stdio.ts"
   },
   "keywords": [],
   "author": "",
@@ -29,6 +30,7 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.1",
+    "rimraf": "^5.0.5",
     "ts-node-dev": "^2.0.0"
   }
 }

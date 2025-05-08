@@ -34,8 +34,8 @@ npm install
 - 开发模式
 
 ```bash
-# 启动开发服务 studio
-npm run dev-studio
+# 启动开发服务 stdio
+npm run dev-stdio
 ```
 
 - 配置mcp server

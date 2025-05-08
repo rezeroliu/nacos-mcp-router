@@ -278,7 +278,7 @@ export class ChromaDb {
 
   public async start() {
     this.ensureChromaInstalled();
-    this.chromaProcess = this.startChromaServer(this.port, this.dbPath);
+    this.startChromaServer(this.port, this.dbPath);
     await this.waitForServerReadySync();
     this.dbClient = new ChromaClient({ path: `http://127.0.0.1:${this.port}` });
     this._collectionId = `nacos_mcp_router-collection-${process.pid}`;
@@ -308,17 +308,20 @@ export class ChromaDb {
 
     if (hasCmd("uv")) {
       logger.info("使用 uv 安装 chromadb ...");
-      execSync("uv pip install chromadb", { stdio: "inherit" });
+      execSync("uv pip install chromadb", { stdio: "ignore" });
     } else if (hasCmd("pip")) {
       logger.info("使用 pip 安装 chromadb ...");
-      execSync("pip install chromadb", { stdio: "inherit" });
+      execSync("pip install chromadb", { stdio: "ignore" });
     } else {
       throw new Error("未检测到 pip 或 uv，请先安装其中之一再运行本程序。");
     }
   }
 
   private startChromaServer(port: number, dbPath: string) {
-    const chromaProcess = spawn(
+    logger.info(`启动 ChromaDB 服务，端口: ${port}，路径: ${dbPath}`);
+    if (this.chromaProcess) return;
+
+    this.chromaProcess = spawn(
       "chroma",
       [
         "run",
@@ -326,22 +329,37 @@ export class ChromaDb {
         "--port", port.toString(),
         "--path", dbPath
       ],
-      { stdio: "inherit" }
+      { stdio: "pipe" }
     );
-    chromaProcess.on("error", (err: any) => {
-      console.error("ChromaDB 启动失败:", err);
+    this.chromaProcess.stdout.on('data', (data: any) => {
+      logger.info(`ChromaDB stdout: ${data}`);
+    });
+    this.chromaProcess.stderr.on('data', (data: any) => {
+      logger.error(`ChromaDB stderr: ${data}`);
+    });
+    this.chromaProcess.on("error", (err: any) => {
+      logger.error("ChromaDB 启动失败:", err);
     });
     process.on("exit", () => {
-      chromaProcess.kill();
+      this.chromaProcess.kill();
     });
-    return chromaProcess;
+
+    this.chromaProcess.on('close', (code: any) => {
+      logger.info(`子进程退出，退出码 ${code}，准备重启...`);
+      // 延迟1秒重启，防止死循环
+      setTimeout(() => {
+        this.startChromaServer(this.port, this.dbPath);
+      }, 1000);
+    });
+    // return chromaProcess;
   }
 
   public async isReady(): Promise<boolean> {
     try {
       execSync(`curl -s http://127.0.0.1:${this.port}/api/v2/heartbeat`, { stdio: "ignore" });
       return true;
-    } catch {
+    } catch(e) {
+      logger.error(`ChromaDB server 未启动成功: ${e}`);
       return false;
     }
   }
