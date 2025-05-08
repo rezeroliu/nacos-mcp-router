@@ -5,9 +5,9 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "start": "ts-node src/index.ts",
-    "dev-studio": "npx ts-node src/index.ts",
-    "dev-sse": "npx ts-node src/simpleSseServer.ts",
+    "start": "ts-node src/studio.ts",
+    "dev-studio": "ts-node src/studio.ts",
+    "dev-sse": "ts-node src/simpleSseServer.ts",
     "test": "jest",
     "debug": "npx @modelcontextprotocol/inspector npx ts-node src/index.ts"
   },

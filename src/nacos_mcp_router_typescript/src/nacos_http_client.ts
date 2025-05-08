@@ -36,6 +36,18 @@ export class NacosHttpClient {
     });
   }
 
+  async isReady(): Promise<boolean> {
+    return new Promise((resolve) => {
+      this.client.get('/nacos/v3/admin/ai/mcp/list').then((response) => {
+        if (response.status === 200) {
+          resolve(true);
+        } else {
+          resolve(false);
+        }
+      });
+    });
+  }
+
   async getMcpServerByName(name: string): Promise<NacosMcpServer> {
     const url = `/nacos/v3/admin/ai/mcp?mcpName=${name}`;
     const mcpServer = new NacosMcpServer(name, '', {});

@@ -5,7 +5,10 @@ import { logger } from './logger';
 import { ChromaClient, Collection, Document, Documents, Embeddings, ID, IDs, IncludeEnum, Metadata, Metadatas } from 'chromadb';
 import { NacosMcpServerConfigImpl } from './nacos_mcp_server_config';
 import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
-import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
+import { CallToolResultSchema, ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
+import { spawn, execSync } from "child_process";
+import path from "path";
+import os from "os";
 
 function _stdioTransportContext(config: Record<string, any>): StdioClientTransport {
   return new StdioClientTransport({
@@ -260,19 +263,106 @@ type MultiGetResponse = {
 type GetResponse = MultiGetResponse;
 
 export class ChromaDb {
-  private dbClient: ChromaClient;
-  private _collectionId: string;
+  private dbClient: ChromaClient | undefined;
+  public _collectionId: string | undefined;
   private _collection: Collection | undefined;
+  private chromaProcess: any;
+  private port: number;
+  private dbPath: string;
 
   constructor() {
-    // const dbPath = path.join(os.homedir(), '.nacos_mcp_router', 'chroma_db');
-    this.dbClient = new ChromaClient({path: 'http://localhost:8000'});
+    this.port = 15321;
+    this.dbPath = path.join(os.homedir(), '.nacos_mcp_router', 'chroma_db');
+    // this.start();
+  }
+
+  public async start() {
+    this.ensureChromaInstalled();
+    this.chromaProcess = this.startChromaServer(this.port, this.dbPath);
+    await this.waitForServerReadySync();
+    this.dbClient = new ChromaClient({ path: `http://127.0.0.1:${this.port}` });
     this._collectionId = `nacos_mcp_router-collection-${process.pid}`;
-    this.dbClient.getOrCreateCollection({
+    this._collection = await  this.dbClient.getOrCreateCollection({
       name: this._collectionId
-    }).then((collection) => {
-      logger.info(`ChromaDB collection created: ${this._collectionId}`);
-      this._collection = collection;
+    });
+    logger.info(`ChromaDB collection created: ${this._collectionId}`);
+  }
+
+  private ensureChromaInstalled() {
+    function hasCmd(cmd: string) {
+      try {
+        execSync(`command -v ${cmd}`, { stdio: "ignore" });
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    try {
+      execSync("chroma --version", { stdio: "ignore" });
+      logger.info("chromadb 已安装");
+      return;
+    } catch {
+      logger.info("chromadb 未安装，准备安装...");
+    }
+
+    if (hasCmd("uv")) {
+      logger.info("使用 uv 安装 chromadb ...");
+      execSync("uv pip install chromadb", { stdio: "inherit" });
+    } else if (hasCmd("pip")) {
+      logger.info("使用 pip 安装 chromadb ...");
+      execSync("pip install chromadb", { stdio: "inherit" });
+    } else {
+      throw new Error("未检测到 pip 或 uv，请先安装其中之一再运行本程序。");
+    }
+  }
+
+  private startChromaServer(port: number, dbPath: string) {
+    const chromaProcess = spawn(
+      "chroma",
+      [
+        "run",
+        "--host", "127.0.0.1",
+        "--port", port.toString(),
+        "--path", dbPath
+      ],
+      { stdio: "inherit" }
+    );
+    chromaProcess.on("error", (err: any) => {
+      console.error("ChromaDB 启动失败:", err);
+    });
+    process.on("exit", () => {
+      chromaProcess.kill();
+    });
+    return chromaProcess;
+  }
+
+  public async isReady(): Promise<boolean> {
+    try {
+      execSync(`curl -s http://127.0.0.1:${this.port}/api/v2/heartbeat`, { stdio: "ignore" });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private waitForServerReadySync() {
+    return new Promise((resolve, reject) => {
+      const retryCount = 3;
+      const retryFn = async (count: number) => {
+        const isReady = await this.isReady();
+        if (!isReady) {
+          if (count > retryCount) {
+            reject(new Error(`ChromaDB server 未启动成功`));
+          }
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          await retryFn(count + 1);
+        } else {
+          resolve(true);
+        }
+      }
+
+      retryFn(0);
     })
   }
 

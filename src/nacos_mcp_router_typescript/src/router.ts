@@ -8,6 +8,7 @@ import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
 import { ChromaDb, NacosMcpServer } from "./router_types";
 // import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
+import { DefaultEmbeddingFunction } from "chromadb";
 
 const MCP_SERVER_NAME = "nacos-mcp-router";
 
@@ -31,27 +32,26 @@ interface ServiceInfo {
 
 export class Router {
   private nacosClient: NacosHttpClient;
-  private mcpManager: McpManager;
-  private chromaDb: ChromaDb;
+  private mcpManager: McpManager | undefined;
+  private chromaDb: ChromaDb | undefined;
   private config: RouterConfig;
   private serviceCache: Map<string, ServiceInfo> = new Map();
   private updateInterval: NodeJS.Timeout | null = null;
-  private mcpServer: McpServer;
+  private mcpServer: McpServer | undefined;
 
   constructor(config: RouterConfig) {
     this.config = config;
     const {serverAddr, username, password} = config.nacos;
     this.nacosClient = new NacosHttpClient(serverAddr, username, password);
-    this.chromaDb = new ChromaDb();
-    this.mcpManager = new McpManager(this.nacosClient, this.chromaDb, 60000);
-    this.mcpServer = new McpServer({
-      name: MCP_SERVER_NAME,
-      version: "1.0.0",
-    });
-    this.registerMcpTools();
   }
 
-  public async registerMcpTools() {
+  private async registerMcpTools() {
+    if (!this.mcpServer) {
+      throw new McpError(ErrorCode.InternalError, "MCP server not initialized");
+    }
+    // if (!this.mcpManager) {
+    //   throw new McpError(ErrorCode.InternalError, "MCP manager not initialized");
+    // }
     try {
       this.mcpServer.tool(
         "SearchMcpServer",
@@ -65,7 +65,7 @@ export class Router {
             
             // 根据关键字搜索MCP服务器
             for (const keyWord of keyWords) {
-              const mcps = await this.mcpManager.searchMcpByKeyword(keyWord);
+              const mcps = await this.mcpManager!.searchMcpByKeyword(keyWord);
               if (mcps.length > 0) {
                 mcpServers1.push(...mcps);
               }
@@ -73,7 +73,7 @@ export class Router {
 
             // 如果找到的服务器数量少于5个，使用任务描述进行从向量库补充搜索
             if (mcpServers1.length < 5) {
-              const additionalServers = await this.mcpManager.getMcpServer(taskDescription, 5 - mcpServers1.length);
+              const additionalServers = await this.mcpManager!.getMcpServer(taskDescription, 5 - mcpServers1.length);
               mcpServers1.push(...additionalServers);
             }
 
@@ -115,7 +115,7 @@ ${content}
         { mcpServerName: z.string(), toolName: z.string(), params: z.record(z.string(), z.any()) },
         async ({ mcpServerName, toolName, params }) => {
           try {
-            const result = await this.mcpManager.useTool(mcpServerName, toolName, params);
+            const result = await this.mcpManager!.useTool(mcpServerName, toolName, params);
             return {
               content: [{
                 type: "text",
@@ -140,7 +140,7 @@ ${content}
         { mcpServerName: z.string() },
         async ({ mcpServerName }) => {
           try {
-            const result = await this.mcpManager.addMcpServer(mcpServerName);
+            const result = await this.mcpManager!.addMcpServer(mcpServerName);
             return {
               content: [{
                 type: "text",
@@ -161,6 +161,36 @@ ${content}
 
   public async start(replaceTransport?: Transport) {
     try {
+      const modelName = "all-MiniLM-L6-v2";
+      const defaultEF = new DefaultEmbeddingFunction({ model: modelName });
+      console.log(`defaultEF: ${defaultEF}`);
+
+      this.chromaDb = new ChromaDb();
+      await this.chromaDb.start();
+      await this.chromaDb.isReady();
+      console.log(`chromaDb is ready, collectionId: ${this.chromaDb._collectionId}`);
+      await this.nacosClient.isReady();
+      this.mcpManager = new McpManager(this.nacosClient, this.chromaDb, 60000);
+      this.mcpServer = new McpServer({
+        name: MCP_SERVER_NAME,
+        version: "1.0.0",
+      });
+
+      const retryCount = 3;
+      const retryFn = async (count: number) => {
+        const isReady = await this.mcpManager!.isReady();
+        if (!isReady) {
+          if (count > retryCount) {
+            throw new McpError(ErrorCode.InternalError, "MCP manager not initialized");
+          }
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          await retryFn(count + 1);
+        }
+      }
+
+      await retryFn(0);
+
+      this.registerMcpTools();
       const transport = new StdioServerTransport();
       if (replaceTransport) {
         this.mcpServer!.connect(replaceTransport);

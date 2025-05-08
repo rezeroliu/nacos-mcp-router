@@ -35,7 +35,7 @@ npm install
 
 ```bash
 # 启动开发服务 studio
-npm run dev-sse
+npm run dev-studio
 ```
 
 - 配置mcp server

@@ -1,80 +1,8 @@
 import express, { Request, Response } from 'express';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
-import { z } from 'zod';
 import { RouterConfig } from './router';
 import { Router } from './router';
-import { config } from './index';
-
-/**
- * This example server demonstrates the deprecated HTTP+SSE transport 
- * (protocol version 2024-11-05). It mainly used for testing backward compatible clients.
- * 
- * The server exposes two endpoints:
- * - /mcp: For establishing the SSE stream (GET)
- * - /messages: For receiving client messages (POST)
- * 
- */
-
-// Create an MCP server instance
-const getServer = () => {
-  const server = new McpServer({
-    name: 'simple-sse-server',
-    version: '1.0.0',
-  }, { capabilities: { logging: {} } });
-
-  server.tool(
-    'start-notification-stream',
-    'Starts sending periodic notifications',
-    {
-      interval: z.number().describe('Interval in milliseconds between notifications').default(1000),
-      count: z.number().describe('Number of notifications to send').default(10),
-    },
-    async ({ interval, count }, { sendNotification }): Promise<CallToolResult> => {
-      const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-      let counter = 0;
-
-      // Send the initial notification
-      await sendNotification({
-        method: "notifications/message",
-        params: {
-          level: "info",
-          data: `Starting notification stream with ${count} messages every ${interval}ms`
-        }
-      });
-
-      // Send periodic notifications
-      while (counter < count) {
-        counter++;
-        await sleep(interval);
-
-        try {
-          await sendNotification({
-            method: "notifications/message",
-            params: {
-              level: "info",
-              data: `Notification #${counter} at ${new Date().toISOString()}`
-            }
-          });
-        }
-        catch (error) {
-          console.error("Error sending notification:", error);
-        }
-      }
-
-      return {
-        content: [
-          {
-            type: 'text',
-            text: `Completed sending ${count} notifications every ${interval}ms`,
-          }
-        ],
-      };
-    }
-  );
-  return server;
-};
+import { config } from './config';
 
 const app = express();
 app.use(express.json());
@@ -84,8 +12,6 @@ const transports: Record<string, SSEServerTransport> = {};
 
 // SSE endpoint for establishing the stream
 app.get('/mcp', async (req: Request, res: Response) => {
-  console.log('Received GET request to /sse (establishing SSE stream)');
-
   try {
     // Create a new SSE transport for the client
     // The endpoint for POST messages is '/messages'
@@ -97,19 +23,11 @@ app.get('/mcp', async (req: Request, res: Response) => {
 
     // Set up onclose handler to clean up transport when closed
     transport.onclose = () => {
-      console.log(`SSE transport closed for session ${sessionId}`);
       delete transports[sessionId];
     };
 
-    // Connect the transport to the MCP server
-    // const server = getServer();
-    // await server.connect(transport);
-
     const router = new Router(config as RouterConfig);
-    // router.start();
     await router.start(transport);
-
-    console.log(`Established SSE stream with session ID: ${sessionId}`);
   } catch (error) {
     console.error('Error establishing SSE stream:', error);
     if (!res.headersSent) {

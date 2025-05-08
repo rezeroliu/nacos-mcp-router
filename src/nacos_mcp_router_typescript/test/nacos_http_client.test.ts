@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { NacosHttpClient } from '../src/nacos_http_client';
+import { ChromaDb } from '../src/router_types';
 // import 'dotenv'
 // import { NacosMcpServer } from '../src/router_types';
 // import { Tool } from '../src/types';
@@ -13,14 +14,15 @@ const passwd = 'P4vUkh2pyS';
 
 
 async function main() {
-    const client = new NacosHttpClient(nacosAddr, userName, passwd);
-// const res = await client.getMcpServerByName('amap');
+    const chromaDb = new ChromaDb();
+//     const client = new NacosHttpClient(nacosAddr, userName, passwd);
+// // const res = await client.getMcpServerByName('amap');
 
-// console.log(res);
+// // console.log(res);
 
-const res2 = await client.getMcpServers();
+// const res2 = await client.getMcpServers();
 
-console.log(res2);
+// console.log(res2);
 
 // const res3 = await client.getMcpServersByPage(1, 10);
 
