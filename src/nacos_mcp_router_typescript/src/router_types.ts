@@ -2,7 +2,7 @@ import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { logger } from './logger';
-import { ChromaClient, Collection, Document, Documents, Embeddings, ID, IDs, IncludeEnum, Metadata, Metadatas } from 'chromadb';
+import { MemoryVectorDB } from './memory_vector';
 import { NacosMcpServerConfigImpl } from './nacos_mcp_server_config';
 import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { CallToolResultSchema, ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
@@ -236,192 +236,63 @@ export class NacosMcpServer {
   }
 }
 
-type SingleQueryResponse = {
-  ids: IDs;
-  embeddings: Embeddings | null;
-  documents: (Document | null)[];
-  metadatas: (Metadata | null)[];
-  distances: number[] | null;
-  included: IncludeEnum[];
-};
-type MultiQueryResponse = {
-  ids: IDs[];
-  embeddings: Embeddings[] | null;
-  documents: (Document | null)[][];
-  metadatas: (Metadata | null)[][];
-  distances: number[][] | null;
-  included: IncludeEnum[];
-};
-
-type MultiGetResponse = {
-  ids: IDs;
-  embeddings: Embeddings | null;
-  documents: (Document | null)[];
-  metadatas: (Metadata | null)[];
-  included: IncludeEnum[];
-};
-type GetResponse = MultiGetResponse;
-
-export class ChromaDb {
-  private dbClient: ChromaClient | undefined;
-  public _collectionId: string | undefined;
-  private _collection: Collection | undefined;
-  private chromaProcess: any;
-  private port: number;
-  private dbPath: string;
+// MemoryVectorDb 兼容接口实现
+export class VectorDB {
+  private db: MemoryVectorDB;
+  public _collectionId: string;
 
   constructor() {
-    this.port = 15321;
-    this.dbPath = path.join(os.homedir(), '.nacos_mcp_router', 'chroma_db');
-    // this.start();
+    this._collectionId = `nacos_mcp_router-collection-${process.pid}`;
+    this.db = new MemoryVectorDB({ numDimensions: 384, indexFile: './my_hnsw_index.bin', metadataFile: './my_hnsw_metadata.json', clearOnStart: true });
   }
 
   public async start() {
-    this.ensureChromaInstalled();
-    this.startChromaServer(this.port, this.dbPath);
-    await this.waitForServerReadySync();
-    this.dbClient = new ChromaClient({ path: `http://127.0.0.1:${this.port}` });
-    this._collectionId = `nacos_mcp_router-collection-${process.pid}`;
-    this._collection = await  this.dbClient.getOrCreateCollection({
-      name: this._collectionId
-    });
-    logger.info(`ChromaDB collection created: ${this._collectionId}`);
-  }
-
-  private ensureChromaInstalled() {
-    function hasCmd(cmd: string) {
-      try {
-        execSync(`command -v ${cmd}`, { stdio: "ignore" });
-        return true;
-      } catch {
-        return false;
-      }
-    }
-
-    try {
-      execSync("chroma --version", { stdio: "ignore" });
-      logger.info("chromadb 已安装");
-      return;
-    } catch {
-      logger.info("chromadb 未安装，准备安装...");
-    }
-
-    if (hasCmd("uv")) {
-      logger.info("使用 uv 安装 chromadb ...");
-      try {
-        execSync("uv pip install chromadb --system", { stdio: "pipe" });
-      } catch (error: any) {
-        logger.error(`uv pip install chromadb 失败: ${error.message}`);
-        if (error.stdout) logger.info(`stdout: ${error.stdout.toString()}`);
-        if (error.stderr) logger.error(`stderr: ${error.stderr.toString()}`);
-        throw error;
-      }
-    } else if (hasCmd("pip")) {
-      logger.info("使用 pip 安装 chromadb ...");
-      try {
-        execSync("pip install chromadb", { stdio: "pipe" });
-      } catch (error: any) {
-        logger.error(`pip install chromadb 失败: ${error.message}`);
-        if (error.stdout) logger.info(`stdout: ${error.stdout.toString()}`);
-        if (error.stderr) logger.error(`stderr: ${error.stderr.toString()}`);
-        throw error;
-      }
-    } else {
-      throw new Error("未检测到 pip 或 uv，请先安装其中之一再运行本程序。");
-    }
-  }
-
-  private startChromaServer(port: number, dbPath: string) {
-    logger.info(`启动 ChromaDB 服务，端口: ${port}，路径: ${dbPath}`);
-    if (this.chromaProcess) return;
-
-    this.chromaProcess = spawn(
-      "chroma",
-      [
-        "run",
-        "--host", "127.0.0.1",
-        "--port", port.toString(),
-        "--path", dbPath
-      ],
-      { stdio: "pipe" }
-    );
-    this.chromaProcess.stdout.on('data', (data: any) => {
-      logger.info(`ChromaDB stdout: ${data}`);
-    });
-    this.chromaProcess.stderr.on('data', (data: any) => {
-      logger.error(`ChromaDB stderr: ${data}`);
-    });
-    this.chromaProcess.on("error", (err: any) => {
-      logger.error("ChromaDB 启动失败:", err);
-    });
-    process.on("exit", () => {
-      this.chromaProcess.kill();
-    });
-
-    this.chromaProcess.on('close', (code: any) => {
-      logger.info(`子进程退出，退出码 ${code}，准备重启...`);
-      // 延迟1秒重启，防止死循环
-      setTimeout(() => {
-        this.startChromaServer(this.port, this.dbPath);
-      }, 1000);
-    });
-    // return chromaProcess;
+    // MemoryVectorDB 初始化已在构造函数完成
+    // 可根据需要预加载或其他操作
+    return;
   }
 
   public async isReady(): Promise<boolean> {
-    try {
-      execSync(`curl -s http://127.0.0.1:${this.port}/api/v2/heartbeat`, { stdio: "ignore" });
-      return true;
-    } catch(e) {
-      logger.error(`ChromaDB server 未启动成功: ${e}`);
-      return false;
-    }
-  }
-
-  private waitForServerReadySync() {
-    return new Promise((resolve, reject) => {
-      const retryCount = 3;
-      const retryFn = async (count: number) => {
-        const isReady = await this.isReady();
-        if (!isReady) {
-          if (count > retryCount) {
-            reject(new Error(`ChromaDB server 未启动成功`));
-          }
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          await retryFn(count + 1);
-        } else {
-          resolve(true);
-        }
-      }
-
-      retryFn(0);
-    })
+    // MemoryVectorDB 无需等待服务启动，直接返回 true
+    return true;
   }
 
   async getCollectionCount(): Promise<number> {
-    return await this._collection!.count();
+    return this.db.getCount();
   }
 
   updateData(
-    ids: IDs,
-    documents?: Documents,
-    metadatas?: Metadatas,
+    ids: string[],
+    documents?: string[],
+    metadatas?: Record<string, any>[]
   ): void {
-    this._collection!.upsert({
+    if (!documents) return;
+    documents.forEach((doc, i) => {
+      this.db.add(doc, { id: ids[i], ...(metadatas ? metadatas[i] : {}) });
+    });
+    this.db.save();
+  }
+
+  async query(query: string, count: number): Promise<any> {
+    const results = await this.db.search(query, count);
+    return {
+      ids: [results.map(r => r.metadata.id)],
+      documents: [results.map(r => r.metadata.text)],
+      metadatas: [results.map(r => r.metadata)],
+      distances: [results.map(r => r.distance)],
+      included: []
+    };
+  }
+
+  async get(ids: string[]): Promise<any> {
+    // 简单实现：根据 id 查找元数据
+    const all = this.db['metadatas'] || [];
+    const found = all.filter((m: any) => ids.includes(m.id));
+    return {
       ids,
-      documents: documents || [],
-      metadatas: metadatas
-    });
-  }
-
-  query(query: string, count: number): Promise<MultiQueryResponse> {
-    return this._collection!.query({
-      queryTexts: [query],
-      nResults: count
-    });
-  }
-
-  get(id: string[]): Promise<GetResponse> {
-    return this._collection!.get({ ids: id });
+      documents: found.map((m: any) => m.text),
+      metadatas: found,
+      included: []
+    };
   }
 }

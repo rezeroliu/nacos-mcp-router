@@ -1,12 +1,12 @@
 import { logger } from "./logger";
 import { NacosHttpClient } from "./nacos_http_client";
-import { ChromaDb, CustomServer, NacosMcpServer } from "./router_types";
+import { VectorDB, CustomServer, NacosMcpServer } from "./router_types";
 import { md5 } from "./md5";
 import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
 
 export class McpManager {
   private nacosClient: NacosHttpClient;
-  private chromaDbService: ChromaDb;
+  private vectorDbService: VectorDB;
   private update_interval: number;
   private _cache: Map<string, NacosMcpServer> = new Map();
   private mcp_server_config_version: Map<string, string> = new Map();
@@ -14,11 +14,11 @@ export class McpManager {
 
   constructor(
     nacosClient: NacosHttpClient,
-    chromaDbService: ChromaDb,
+    vectorDbService: VectorDB,
     update_interval: number
   ) {
     this.nacosClient = nacosClient;
-    this.chromaDbService = chromaDbService;
+    this.vectorDbService = vectorDbService;
     this.update_interval = update_interval;
     this.updateNow();
     this.asyncUpdater();
@@ -64,7 +64,7 @@ export class McpManager {
       this._cache = cache;
 
       if (ids.length > 0) {
-        await this.chromaDbService.updateData(
+        await this.vectorDbService.updateData(
           ids,
           docs as any,
         );
@@ -90,7 +90,7 @@ export class McpManager {
 
   async getMcpServer(queryTexts: string, count: number): Promise<NacosMcpServer[]> {
     try {
-      const result = await this.chromaDbService.query(
+      const result = await this.vectorDbService.query(
         queryTexts,
         count,
       );

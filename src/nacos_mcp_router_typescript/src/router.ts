@@ -5,7 +5,7 @@ import { McpManager } from "./mcp_manager";
 import { logger } from "./logger";
 import { z } from "zod";
 import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
-import { ChromaDb, NacosMcpServer } from "./router_types";
+import { VectorDB, NacosMcpServer } from "./router_types";
 // import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 
@@ -32,14 +32,10 @@ interface ServiceInfo {
 export class Router {
   private nacosClient: NacosHttpClient;
   private mcpManager: McpManager | undefined;
-  private chromaDb: ChromaDb | undefined;
-  private config: RouterConfig;
-  private serviceCache: Map<string, ServiceInfo> = new Map();
-  private updateInterval: NodeJS.Timeout | null = null;
+  private vectorDB: VectorDB | undefined;
   private mcpServer: McpServer | undefined;
 
   constructor(config: RouterConfig) {
-    this.config = config;
     const {serverAddr, username, password} = config.nacos;
     this.nacosClient = new NacosHttpClient(serverAddr, username, password);
   }
@@ -48,9 +44,6 @@ export class Router {
     if (!this.mcpServer) {
       throw new McpError(ErrorCode.InternalError, "MCP server not initialized");
     }
-    // if (!this.mcpManager) {
-    //   throw new McpError(ErrorCode.InternalError, "MCP manager not initialized");
-    // }
     try {
       this.mcpServer.tool(
         "SearchMcpServer",
@@ -160,34 +153,30 @@ ${content}
 
   public async start(replaceTransport?: Transport) {
     try {
-      const { env } = await import("chromadb-default-embed");
-      (env as any).remoteHost = "https://hf-mirror.com";
+      // const modelName = "all-MiniLM-L6-v2";
+      // const defaultEF = new DefaultEmbeddingFunction({ model: modelName });
+      // console.log(`defaultEF: ${defaultEF}`);
 
-      this.chromaDb = new ChromaDb();
-      await this.chromaDb.start();
-      await this.chromaDb.isReady();
-      logger.info(`chromaDb is ready, collectionId: ${this.chromaDb._collectionId}`);
+      const { env } = await import("@xenova/transformers");
+      (env as any).remoteHost = "https://hf-mirror.com";
+      if (!this.vectorDB) {
+        this.vectorDB = new VectorDB();
+        await this.vectorDB.start();
+        await this.vectorDB.isReady();
+        logger.info(`vectorDB is ready, collectionId: ${this.vectorDB._collectionId}`);
+      }
       await this.nacosClient.isReady();
       logger.info(`nacosClient is ready`);
-      this.mcpManager = new McpManager(this.nacosClient, this.chromaDb, 60000);
-      this.mcpServer = new McpServer({
-        name: MCP_SERVER_NAME,
-        version: "1.0.0",
-      });
+      if (!this.mcpManager) {
+        this.mcpManager = new McpManager(this.nacosClient, this.vectorDB, 60000);
+      }
+      if (!this.mcpServer) {
+        this.mcpServer = new McpServer({
+          name: MCP_SERVER_NAME,
+          version: "1.0.0",
+        });
+      }
 
-      // const retryCount = 3;
-      // const retryFn = async (count: number) => {
-      //   const isReady = await this.mcpManager!.isReady();
-      //   if (!isReady) {
-      //     if (count > retryCount) {
-      //       throw new McpError(ErrorCode.InternalError, "MCP manager not initialized");
-      //     }
-      //     await new Promise(resolve => setTimeout(resolve, 1000));
-      //     await retryFn(count + 1);
-      //   }
-      // }
-
-      // await retryFn(0);
       logger.info(`registerMcpTools`);
       this.registerMcpTools();
       const transport = new StdioServerTransport();
