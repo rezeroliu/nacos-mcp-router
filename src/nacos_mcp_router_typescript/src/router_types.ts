@@ -1,33 +1,35 @@
 import { ClientSession } from 'mcp';
 import { sseClient } from 'mcp/client/sse';
+import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { getDefaultEnvironment, StdioServerParameters, stdioClient } from 'mcp/client/stdio';
 import { AsyncExitStack } from 'contextlib';
-import { NacosMcpRouteLogger } from './logger';
+import { logger } from './logger';
 import { ChromaClient, Collection, Settings } from 'chromadb';
 import { OneOrMany, ID, Document, GetResult, QueryResult } from 'chromadb/api/types';
 import * as path from 'path';
 import * as os from 'os';
 import { NacosMcpServerConfig } from './nacos_mcp_server_config';
+import { Transport } from '@modelcontextprotocol/sdk/shared/transport';
 
 type TransportContext = {
   read: any;
   write: any;
 };
 
-function _stdioTransportContext(config: Record<string, any>): TransportContext {
-  const serverParams = new StdioServerParameters({
+function _stdioTransportContext(config: Record<string, any>): StdioClientTransport {
+  return new StdioClientTransport({
     command: config.command,
     args: config.args,
     env: config.env
   });
-  return stdioClient(serverParams);
 }
 
-function _sseTransportContext(config: Record<string, any>): TransportContext {
-  return sseClient({
-    url: config.url,
-    headers: config.headers,
-    timeout: 10
+function _sseTransportContext(config: Record<string, any>): SSEClientTransport {
+  return new SSEClientTransport(config.url, {
+    // headers: config.headers,
+    // timeout: 10
   });
 }
 
@@ -40,10 +42,11 @@ export class CustomServer {
   private exitStack: AsyncExitStack = new AsyncExitStack();
   private _initializedEvent: Promise<void> = Promise.resolve();
   private _shutdownEvent: Promise<void> = Promise.resolve();
-  private _transportContextFactory: (config: Record<string, any>) => TransportContext;
+  private _transportContextFactory: (config: Record<string, any>) => Transport;
   private _serverTask: Promise<void>;
   private _initialized: boolean = false;
   private sessionInitializedResponse: any;
+  private client: Client;
 
   constructor(name: string, config: Record<string, any>) {
     this.name = name;
@@ -51,48 +54,81 @@ export class CustomServer {
     this._cleanupLock = new Promise<void>(resolve => resolve());
     this._initializedEvent = new Promise<void>(resolve => resolve());
     this._shutdownEvent = new Promise<void>(resolve => resolve());
-    
-    NacosMcpRouteLogger.getLogger().info(`mcp server config: ${JSON.stringify(config)}`);
-    
-    this._transportContextFactory = 'url' in config.mcpServers[name] 
-      ? _sseTransportContext 
+
+    logger.info(`mcp server config: ${JSON.stringify(config)}`);
+
+    this._transportContextFactory = 'url' in config.mcpServers[name]
+      ? _sseTransportContext
       : _stdioTransportContext;
 
-    this._serverTask = this._serverLifespanCycle();
+    // 全局保持一个client 切换连接？
+    this.client = new Client({
+      name: config.name,
+      version: '1.0.0'
+    })
+
+    this.start()
   }
 
-  private async _serverLifespanCycle(): Promise<void> {
-    try {
-      let serverConfig = this.config;
-      if ('mcpServers' in this.config) {
-        const mcpServers = this.config.mcpServers;
-        for (const [key, value] of Object.entries(mcpServers)) {
-          serverConfig = value;
-        }
-      }
-
-      const transportContext = this._transportContextFactory(serverConfig);
-      const { read, write } = transportContext;
-      
-      const session = new ClientSession(read, write);
-      this.sessionInitializedResponse = await session.initialize();
-      this.session = session;
-      this._initialized = true;
-      this._initializedEvent = Promise.resolve();
-      
-      await this.waitForShutdownRequest();
-    } catch (e) {
-      NacosMcpRouteLogger.getLogger().warning(
-        `failed to init mcp server ${this.name}, config: ${JSON.stringify(this.config)}`,
-        e
-      );
-      this._initializedEvent = Promise.resolve();
-      this._shutdownEvent = Promise.resolve();
-    }
+  public start() {
+    this.client.connect(this._transportContextFactory(this.config))
   }
+
+  // private async _serverLifespanCycle(): Promise<void> {
+  //   try {
+  //     let serverConfig = this.config;
+  //     if ('mcpServers' in this.config) {
+  //       const mcpServers = this.config.mcpServers;
+  //       for (const [key, value] of Object.entries(mcpServers)) {
+  //         serverConfig = value;
+  //       }
+  //     }
+
+  //     const transportContext = this._transportContextFactory(serverConfig);
+  //     const { read, write } = transportContext;
+
+  //     const session = new ClientSession(read, write);
+  //     this.sessionInitializedResponse = await session.initialize();
+  //     this.session = session;
+  //     this._initialized = true;
+  //     this._initializedEvent = Promise.resolve();
+
+  //     await this.waitForShutdownRequest();
+  //   } catch (e) {
+  //     logger.warning(
+  //       `failed to init mcp server ${this.name}, config: ${JSON.stringify(this.config)}`,
+  //       e
+  //     );
+  //     this._initializedEvent = Promise.resolve();
+  //     this._shutdownEvent = Promise.resolve();
+  //   }
+  // }
 
   healthy(): boolean {
-    return this.session !== null && this._initialized;
+    try {
+      // 检查客户端是否已初始化  
+      if (!this.client) {
+        return false;
+      }
+
+      // 检查 transport 是否存在  
+      const transport = this.client.transport;
+      if (!transport) {
+        return false;
+      }
+
+      // 检查 transport 类型并进行相应的健康检查  
+      if (transport instanceof StdioClientTransport) {
+        // 对于 Stdio transport，检查进程是否仍在运行  
+        return transport['_process']?.killed === false;
+      } else {
+        // 对于其他类型的 transport，使用通用检查  
+        return transport.sessionId !== undefined;
+      }
+    } catch (e) {
+      logger.error(`Error checking health for server ${this.name}:`, e);
+      return false;
+    }
   }
 
   async waitForInitialization(): Promise<void> {
@@ -118,35 +154,51 @@ export class CustomServer {
 
   async executeTool(
     toolName: string,
-    arguments: Record<string, any>,
+    params: Record<string, any>,
     retries: number = 2,
     delay: number = 1.0
   ): Promise<any> {
-    if (!this.session) {
+    if (!this.client || !this.healthy()) {
       throw new Error(`Server ${this.name} not initialized`);
     }
 
-    let attempt = 0;
-    while (attempt < retries) {
+    const executeWithRetry = async (attempt: number): Promise<any> => {
       try {
-        const result = await this.session.callTool(toolName, arguments);
+        const result = await this.client.request({
+          method: 'tools/call',
+          params: {
+            name: toolName,
+            arguments: params
+          }
+        });
         return result;
       } catch (e) {
-        attempt++;
-        if (attempt < retries) {
-          await new Promise(resolve => setTimeout(resolve, delay * 1000));
-          await this.session.initialize();
-          try {
-            const result = await this.session.callTool(toolName, arguments);
-            return result;
-          } catch (e) {
-            throw e;
-          }
-        } else {
+        if (attempt >= retries) {
           throw e;
         }
+
+        logger.warning(
+          `Tool execution failed for ${toolName} on server ${this.name}, attempt ${attempt}/${retries}`,
+          e
+        );
+
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, delay * 1000));
+
+        // Try to reconnect if needed
+        if (!this.healthy()) {
+          logger.info(`Reconnecting to server ${this.name} before retry`);
+          const transport = this._transportContextFactory(this.config.mcpServers[this.name]);
+          await this.client.connect(transport);
+          this._initialized = true;
+        }
+
+        // Recursive retry
+        return executeWithRetry(attempt + 1);
       }
-    }
+    };
+
+    return executeWithRetry(1);
   }
 
   async cleanup(): Promise<void> {

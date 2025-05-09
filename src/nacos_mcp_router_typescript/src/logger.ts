@@ -1,4 +1,4 @@
-import winston from 'winston';
+import winston from 'winston'; // 日志滚动
 import path from 'path';
 import os from 'os';
 import 'winston-daily-rotate-file';
