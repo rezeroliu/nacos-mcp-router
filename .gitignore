@@ -174,3 +174,4 @@ cython_debug/
 .pypirc
 src/nacos_mcp_router_typescript/node_modules
 .vscode/
+getting-started/
