@@ -17,7 +17,7 @@ nacos_user_name = os.getenv("NACOS_USERNAME","nacos")
 nacos_password = os.getenv("NACOS_PASSWORD","")
 nacos_http_client = NacosHttpClient(nacosAddr=nacos_addr if nacos_addr != "" else "127.0.0.1:8848", userName=nacos_user_name if nacos_user_name != "" else "nacos",passwd=nacos_password)
 chroma_db_service = ChromaDb()
-mcp_updater = McpUpdater(nacosHttpClient=nacos_http_client, chromaDbService=chroma_db_service, update_interval=10)
+mcp_updater = McpUpdater(nacosHttpClient=nacos_http_client, chromaDbService=chroma_db_service, update_interval=60)
 mcp_servers_dict = {}
 
 router_logger = NacosMcpRouteLogger.get_logger()
@@ -98,7 +98,7 @@ async def add_mcp_server(mcp_server_name: str) -> str:
       mcp_server = mcp_updater.get_mcp_server_by_name(mcp_server_name)
 
     if mcp_server is None:
-      return f"mcp server {mcp_server_name} 未找到，请使用 search_mcp_server 工具获取可用的 mcp server 列表"
+      return mcp_server_name + " is not found" + ", use search_mcp_server to get mcp servers"
 
     disenabled_tools = {}
     tools_meta = mcp_server.mcp_config_detail.tool_spec.tools_meta
@@ -113,15 +113,6 @@ async def add_mcp_server(mcp_server_name: str) -> str:
         mcp_server.agentConfig = {}
       if 'mcpServers' not in mcp_server.agentConfig or mcp_server.agentConfig['mcpServers'] is None:
         mcp_server.agentConfig['mcpServers'] = {}
-
-      # 确保当前 mcp server 的配置存在
-      # if mcp_server_name not in mcp_server.agentConfig['mcpServers']:
-      #   mcp_server.agentConfig['mcpServers'][mcp_server_name] = {
-      #     'name': mcp_server_name,
-      #     'description': mcp_server.description,
-      #     'env': {},
-      #     'headers': {}
-      #   }
 
       mcp_servers = mcp_server.agentConfig["mcpServers"]
       for key, value in mcp_servers.items():
