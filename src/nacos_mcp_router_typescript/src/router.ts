@@ -179,11 +179,13 @@ ${content}
 
       logger.info(`registerMcpTools`);
       this.registerMcpTools();
-      const transport = new StdioServerTransport();
       if (replaceTransport) {
         this.mcpServer!.connect(replaceTransport);
       } else {
+        const transport = new StdioServerTransport();
+        logger.info(`transport: ${transport}`);
         await this.mcpServer!.connect(transport);
+        logger.info(`mcpServer is connected, transport: ${JSON.stringify(transport)}`);
       }
     } catch (error) {
       logger.error("Failed to start Nacos MCP Router:", error);
