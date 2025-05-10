@@ -5,7 +5,7 @@ import { logger } from './logger';
 import { MemoryVectorDB } from './memory_vector';
 import { NacosMcpServerConfigImpl } from './nacos_mcp_server_config';
 import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
-import { CallToolResultSchema, ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
+import { CallToolResultSchema, ListResourcesResultSchema, LoggingMessageNotificationSchema, ResourceListChangedNotificationSchema } from "@modelcontextprotocol/sdk/types.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 
 function _stdioTransportContext(config: Record<string, any>): StdioClientTransport {
@@ -17,16 +17,15 @@ function _stdioTransportContext(config: Record<string, any>): StdioClientTranspo
 }
 
 function _sseTransportContext(config: Record<string, any>): SSEClientTransport {
-  return new SSEClientTransport(config.url, {
+  return new SSEClientTransport(new URL(config.url), {
     // headers: config.headers,
     // timeout: 10
   });
 }
 
 function _streamableHttpTransportContext(config: Record<string, any>): StreamableHTTPClientTransport {
-  return new StreamableHTTPClientTransport(config.url, {
-    // headers: config.headers,
-    // timeout: 10
+  return new StreamableHTTPClientTransport(new URL(config.url), {
+    sessionId: config.sessionId
   });
 }
 
@@ -34,7 +33,8 @@ export class CustomServer {
   private name: string;
   private config: Record<string, any>;
   private _transportContextFactory: (config: Record<string, any>) => Transport;
-  private client: Client;
+  private client: Client | undefined;
+  private sessionId: string | undefined;
 
   constructor(name: string, config: Record<string, any>, protocol: string) {
     this.name = name;
@@ -50,17 +50,59 @@ export class CustomServer {
     }
 
     // 全局保持一个client 切换连接？
-    this.client = new Client({
-      name: this.name,
-      version: '1.0.0'
-    })
-
-    // this.start()
+    // this.client = new Client({
+    //   name: this.name,
+    //   version: '1.0.0'
+    // })
   }
 
   public async start(mcpServerName: string) {
-    const transport = this._transportContextFactory(this.config.mcpServers[mcpServerName]);
-    this.client.connect(transport)
+    let notificationCount = 0;
+    // Create a new client
+    this.client = new Client({
+      name: this.name,
+      version: '1.0.0'
+    });
+    this.client.onerror = (error) => {
+      logger.error('\x1b[31mClient error:', error, '\x1b[0m');
+    }
+
+    // Set up notification handlers
+    this.client.setNotificationHandler(LoggingMessageNotificationSchema, (notification) => {
+      notificationCount++;
+      logger.info(`Notification #${notificationCount}: ${notification.params.level} - ${notification.params.data}`);
+      // Re-display the prompt
+      // process.stdout.write('> ');
+    });
+
+    this.client.setNotificationHandler(ResourceListChangedNotificationSchema, async (_) => {
+      logger.info(`Resource list changed notification received!`);
+      try {
+        if (!this.client) {
+          logger.error('Client disconnected, cannot fetch resources');
+          return;
+        }
+        const resourcesResult = await this.client.request({
+          method: 'resources/list',
+          params: {}
+        }, ListResourcesResultSchema);
+        logger.info('Available resources count:', resourcesResult.resources.length);
+      } catch {
+        logger.error('Failed to list resources after change notification');
+      }
+      // Re-display the prompt
+      // process.stdout.write('> ');
+    });
+    // TODO: 👆也没有初始化sessionId 加上就有了sessionId 魔法？
+
+    // Connect the client
+    const transport = this._transportContextFactory({
+      ...this.config.mcpServers[mcpServerName],
+      sessionId: this.sessionId // StreamableHttpTransport 需要Client保存sessionId
+    });
+    await this.client.connect(transport)
+    // TODO: StreamableHttpTransport 未返回SessionId，没有赋值成功 看看transport由哪里初始化
+    this.sessionId = transport.sessionId;
   }
 
   healthy(): boolean {
@@ -92,10 +134,10 @@ export class CustomServer {
     }
   }
 
-  async requestForShutdown(): Promise<void> {
-    // this._shutdownEvent = Promise.resolve();
-    await this.client.close();
-  }
+  // async requestForShutdown(): Promise<void> {
+  //   // this._shutdownEvent = Promise.resolve();
+  //   await this.client.close();
+  // }
 
   async listTools(): Promise<any[]> {  
     if (!this.client || !this.healthy()) {  
@@ -128,7 +170,7 @@ export class CustomServer {
         const timeoutPromise = new Promise((_, reject) => 
           +   setTimeout(() => reject(new Error('Request timeout')), 10000));
 
-        const result = await Promise.race([timeoutPromise, this.client.request({
+        const result = await Promise.race([timeoutPromise, this.client!.request({
           method: 'tools/call',
           params: {
             name: toolName,
@@ -153,7 +195,7 @@ export class CustomServer {
         if (!this.healthy()) {
           logger.info(`Reconnecting to server ${this.name} before retry`);
           const transport = this._transportContextFactory(this.config.mcpServers[this.name]);
-          await this.client.connect(transport);
+          await this.client!.connect(transport);
         }
 
         // Recursive retry
