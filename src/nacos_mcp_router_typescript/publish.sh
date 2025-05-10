@@ -89,13 +89,13 @@ fi
 git commit -m "chore(release): 准备发布 v$new_version"
 
 # 推送到远程仓库
-echo -e "${GREEN}正在推送到远程仓库...${NC}"
-git push origin $current_branch
+# echo -e "${GREEN}正在推送到远程仓库...${NC}"
+# git push origin $current_branch
 
 # 创建并推送tag
 echo -e "${GREEN}正在创建版本标签...${NC}"
 git tag -a "v$new_version" -m "Release v$new_version"
-git push origin "v$new_version"
+# git push origin "v$new_version"
 
 # 发布到npm
 echo -e "${GREEN}正在发布到npm...${NC}"

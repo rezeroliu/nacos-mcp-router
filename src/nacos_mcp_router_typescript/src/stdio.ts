@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { Router, RouterConfig } from './router';
 import { logger } from './logger';
 import { config } from './config';

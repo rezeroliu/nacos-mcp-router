@@ -1,10 +1,13 @@
 {
-  "name": "nacos-mcp-router-ts",
-  "version": "1.0.1",
+  "name": "@nacos/nacos-mcp-router",
+  "version": "1.0.2",
   "description": "Nacos MCP Router TypeScript implementation",
   "main": "dist/stdio.js",
+  "bin": {
+    "nacos-mcp-router": "./dist/stdio.js"
+  },
   "scripts": {
-    "build": "rimraf dist && tsc",
+    "build": "rimraf dist && tsc && chmod +x dist/stdio.js",
     "build:watch": "tsc -w",
     "start": "ts-node src/stdio.ts",
     "dev-stdio": "ts-node src/stdio.ts",
