@@ -91,34 +91,6 @@ export class NacosHttpClient {
     return mcpServer;
   }
 
-  async getMcpServersByPage(pageNo: number, pageSize: number): Promise<NacosMcpServer[]> {
-    const mcpServers: NacosMcpServer[] = [];
-    try {
-      const url = `/nacos/v3/admin/ai/mcp/list?pageNo=${pageNo}&pageSize=${pageSize}`;
-      const response = await this.client.get(url);
-
-      if (response.status !== 200) {
-        logger.warning(`failed to get mcp server list response: ${response.data}`);
-        return [];
-      }
-
-      const data = response.data.data;
-      for (const mcpServerDict of data.pageItems) {
-        if (mcpServerDict.enabled) {
-          const mcpName = mcpServerDict.name;
-          const mcpServer = await this.getMcpServerByName(mcpName);
-
-          if (mcpServer.description) {
-            mcpServers.push(mcpServer);
-          }
-        }
-      }
-    } catch (error) {
-      logger.error('Error getting mcp servers by page:', error);
-    }
-    return mcpServers;
-  }
-
   async getMcpServers(): Promise<NacosMcpServer[]> {
     const mcpServers: NacosMcpServer[] = [];
     try {
@@ -132,12 +104,15 @@ export class NacosHttpClient {
         return [];
       }
 
-      const totalCount = response.data.data.totalCount;
-      const totalPages = Math.ceil(totalCount / pageSize);
+      for (const mcpServerDict of response.data.data.pageItems) {
+        if (mcpServerDict.enabled) {
+          const mcpName = mcpServerDict.name;
+          const mcpServer = await this.getMcpServerByName(mcpName);
 
-      for (let i = 1; i <= totalPages; i++) {
-        const mcps = await this.getMcpServersByPage(i, pageSize);
-        mcpServers.push(...mcps);
+          if (mcpServer.description) {
+            mcpServers.push(mcpServer);
+          }
+        }
       }
     } catch (error) {
       logger.error('Error getting mcp servers:', error);
