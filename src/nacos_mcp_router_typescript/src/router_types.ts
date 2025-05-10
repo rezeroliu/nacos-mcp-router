@@ -35,10 +35,11 @@ export class CustomServer {
   private _transportContextFactory: (config: Record<string, any>) => Transport;
   private client: Client | undefined;
   private sessionId: string | undefined;
-
+  private protocol: string;
   constructor(name: string, config: Record<string, any>, protocol: string) {
     this.name = name;
     this.config = config;
+    this.protocol = protocol;
 
     logger.info(`mcp server config: ${JSON.stringify(config)}, protocol: ${protocol}`);
 
@@ -96,38 +97,55 @@ export class CustomServer {
     // TODO: 👆也没有初始化sessionId 加上就有了sessionId 魔法？
 
     // Connect the client
-    const transport = this._transportContextFactory({
-      ...this.config.mcpServers[mcpServerName],
-      sessionId: this.sessionId // StreamableHttpTransport 需要Client保存sessionId
-    });
+    let transport: Transport;
+    if (this.protocol === 'mcp-streamble') {
+      transport = this._transportContextFactory({
+        ...this.config.mcpServers[mcpServerName],
+        sessionId: this.sessionId // StreamableHttpTransport 需要Client保存sessionId
+      });
+    } else {
+      transport = this._transportContextFactory(this.config.mcpServers[mcpServerName]);
+    }
     await this.client.connect(transport)
     // TODO: StreamableHttpTransport 未返回SessionId，没有赋值成功 看看transport由哪里初始化
-    this.sessionId = transport.sessionId;
+    if (transport instanceof StreamableHTTPClientTransport) {
+      this.sessionId = transport.sessionId;
+    }
   }
 
-  healthy(): boolean {
+  async healthy(): Promise<boolean> {
     try {
+      logger.info(`check health, client: ${this.client}`);
       // 检查客户端是否已初始化  
       if (!this.client) {
         return false;
       }
+      const result = await this.client?.ping();
+      logger.info(`check health, result: ${JSON.stringify(result)}`);
+      return true;
 
       // 检查 transport 是否存在  
-      const transport = this.client.transport;
-      if (!transport) {
-        return false;
-      }
+      // const transport = this.client.transport;
+      // if (!transport) {
+      //   return false;
+      // }
 
-      logger.info(`check health, transport: ${JSON.stringify(transport)}`);
+      // logger.info(`check health, transport: ${JSON.stringify(transport)}`);
 
-      // 检查 transport 类型并进行相应的健康检查  
-      if (transport instanceof StdioClientTransport) {
-        // 对于 Stdio transport，检查进程是否仍在运行  
-        return transport['_process']?.killed === false;
-      } else {
-        // 对于其他类型的 transport，使用通用检查  
-        return transport.sessionId !== undefined;
-      }
+      // // 检查 transport 类型并进行相应的健康检查  
+      // if (transport instanceof StdioClientTransport) {
+      //   // 对于 Stdio transport，检查进程是否仍在运行  
+      //   return transport['_process']?.killed === false;
+      // } else if (transport instanceof StreamableHTTPClientTransport) {
+      //   // 对于 StreamableHTTPClientTransport，检查 sessionId 是否存在  
+      //   return transport.sessionId !== undefined;
+      // } else if (transport instanceof SSEClientTransport) {
+      //   // 对于其他类型的 transport，使用通用检查  
+      //   const isHealthy = !!transport['_endpoint']?.searchParams.get('sessionId');
+      //   logger.info(`transport: ${transport['_endpoint']?.searchParams.get('sessionId')}, isHealthy: ${isHealthy}`);
+      //   return isHealthy;
+      // }
+      // return false;
     } catch (e) {
       logger.error(`Error checking health for server ${this.name}:`, e);
       return false;
@@ -140,7 +158,7 @@ export class CustomServer {
   // }
 
   async listTools(): Promise<any[]> {  
-    if (!this.client || !this.healthy()) {  
+    if (!this.client || !(await this.healthy())) {  
       throw new Error(`Server ${this.name} is not initialized`);  
     }  
     
@@ -161,7 +179,7 @@ export class CustomServer {
     retries: number = 2,
     delay: number = 1.0
   ): Promise<any> {
-    if (!this.client || !this.healthy()) {
+    if (!this.client || !(await this.healthy())) {
       throw new Error(`Server ${this.name} not initialized`);
     }
 
@@ -192,7 +210,7 @@ export class CustomServer {
         await new Promise(resolve => setTimeout(resolve, delay * 1000));
 
         // Try to reconnect if needed
-        if (!this.healthy()) {
+        if (!(await this.healthy())) {
           logger.info(`Reconnecting to server ${this.name} before retry`);
           const transport = this._transportContextFactory(this.config.mcpServers[this.name]);
           await this.client!.connect(transport);

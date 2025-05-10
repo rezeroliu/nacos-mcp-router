@@ -144,7 +144,7 @@ export class McpManager {
       throw new McpError(ErrorCode.InternalError, `MCP server ${mcpServerName} not found`);
     }
 
-    if (mcpServer.healthy()) {
+    if (await mcpServer.healthy()) {
       const enrichedParams = {
         ...params,
       };
@@ -202,7 +202,7 @@ export class McpManager {
       // await server.waitForInitialization();
       await server.start(mcpServerName);
       // TODO: StreamableHttpTransport 无SessionId
-      if (server.healthy()) {
+      if (await server.healthy()) {
         this.healthyMcpServers.set(mcpServerName, server);
       }
     }
