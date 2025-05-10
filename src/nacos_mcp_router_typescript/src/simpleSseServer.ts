@@ -3,7 +3,7 @@ import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { RouterConfig } from './router';
 import { Router } from './router';
 import { config } from './config';
-
+import { logger } from './logger';
 const app = express();
 app.use(express.json());
 
@@ -38,21 +38,21 @@ app.get('/mcp', async (req: Request, res: Response) => {
 
 // Messages endpoint for receiving client JSON-RPC requests
 app.post('/messages', async (req: Request, res: Response) => {
-  console.log('Received POST request to /messages');
+  logger.info('Received POST request to /messages');
 
   // Extract session ID from URL query parameter
   // In the SSE protocol, this is added by the client based on the endpoint event
   const sessionId = req.query.sessionId as string | undefined;
 
   if (!sessionId) {
-    console.error('No session ID provided in request URL');
+    logger.error('No session ID provided in request URL');
     res.status(400).send('Missing sessionId parameter');
     return;
   }
 
   const transport = transports[sessionId];
   if (!transport) {
-    console.error(`No active transport found for session ID: ${sessionId}`);
+    logger.error(`No active transport found for session ID: ${sessionId}`);
     res.status(404).send('Session not found');
     return;
   }
@@ -61,7 +61,7 @@ app.post('/messages', async (req: Request, res: Response) => {
     // Handle the POST message with the transport
     await transport.handlePostMessage(req, res, req.body);
   } catch (error) {
-    console.error('Error handling request:', error);
+    logger.error('Error handling request:', error);
     if (!res.headersSent) {
       res.status(500).send('Error handling request');
     }
@@ -71,23 +71,23 @@ app.post('/messages', async (req: Request, res: Response) => {
 // Start the server
 const PORT = 3000;
 app.listen(PORT, () => {
-  console.log(`Simple SSE Server (deprecated protocol version 2024-11-05) listening on port ${PORT}`);
+  logger.info(`Simple SSE Server (deprecated protocol version 2024-11-05) listening on port ${PORT}`);
 });
 
 // Handle server shutdown
 process.on('SIGINT', async () => {
-  console.log('Shutting down server...');
+  logger.info('Shutting down server...');
 
   // Close all active transports to properly clean up resources
   for (const sessionId in transports) {
     try {
-      console.log(`Closing transport for session ${sessionId}`);
+      logger.info(`Closing transport for session ${sessionId}`);
       await transports[sessionId].close();
       delete transports[sessionId];
     } catch (error) {
-      console.error(`Error closing transport for session ${sessionId}:`, error);
+      logger.error(`Error closing transport for session ${sessionId}:`, error);
     }
   }
-  console.log('Server shutdown complete');
+  logger.info('Server shutdown complete');
   process.exit(0);
 });

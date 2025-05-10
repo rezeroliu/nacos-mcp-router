@@ -175,3 +175,4 @@ cython_debug/
 src/nacos_mcp_router_typescript/node_modules
 .vscode/
 getting-started/
+my_hnsw_*.*

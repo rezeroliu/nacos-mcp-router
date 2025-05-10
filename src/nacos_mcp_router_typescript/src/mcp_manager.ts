@@ -96,13 +96,12 @@ export class McpManager {
       );
       const ids = result.ids;
       const mcpServers: NacosMcpServer[] = [];
+      logger.info(`get mcp server from vector db, ids: ${ids}`);
 
       for (const id of ids) {
-        for (const id1 of id) {
-          const mcpServer = this._cache.get(id1);
-          if (mcpServer !== undefined) {
-            mcpServers.push(mcpServer);
-          }
+        const mcpServer = this._cache.get(id);
+        if (mcpServer !== undefined) {
+          mcpServers.push(mcpServer);
         }
       }
       return mcpServers;
@@ -126,6 +125,7 @@ export class McpManager {
         continue;
       }
       if (description.includes(keyword)) {
+        // TODO: 如果mcpServer.mcpConfigDetail.getToolDescription()与keyword的模糊匹配优化（description.includes(keyword)是精确匹配）
         servers.push(mcpServer);
       }
     }

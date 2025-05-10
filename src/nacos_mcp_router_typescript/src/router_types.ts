@@ -55,36 +55,6 @@ export class CustomServer {
     this.client.connect(transport)
   }
 
-  // private async _serverLifespanCycle(): Promise<void> {
-  //   try {
-  //     let serverConfig = this.config;
-  //     if ('mcpServers' in this.config) {
-  //       const mcpServers = this.config.mcpServers;
-  //       for (const [key, value] of Object.entries(mcpServers)) {
-  //         serverConfig = value;
-  //       }
-  //     }
-
-  //     const transportContext = this._transportContextFactory(serverConfig);
-  //     const { read, write } = transportContext;
-
-  //     const session = new ClientSession(read, write);
-  //     this.sessionInitializedResponse = await session.initialize();
-  //     this.session = session;
-  //     this._initialized = true;
-  //     this._initializedEvent = Promise.resolve();
-
-  //     await this.waitForShutdownRequest();
-  //   } catch (e) {
-  //     logger.warn(
-  //       `failed to init mcp server ${this.name}, config: ${JSON.stringify(this.config)}`,
-  //       e
-  //     );
-  //     this._initializedEvent = Promise.resolve();
-  //     this._shutdownEvent = Promise.resolve();
-  //   }
-  // }
-
   healthy(): boolean {
     try {
       // 检查客户端是否已初始化  
@@ -112,18 +82,10 @@ export class CustomServer {
     }
   }
 
-  // async waitForInitialization(): Promise<void> {
-  //   await this._initializedEvent;
-  // }
-
   async requestForShutdown(): Promise<void> {
     // this._shutdownEvent = Promise.resolve();
     await this.client.close();
   }
-
-  // async waitForShutdownRequest(): Promise<void> {
-  //   await this._shutdownEvent;
-  // }
 
   async listTools(): Promise<any[]> {  
     if (!this.client || !this.healthy()) {  
@@ -153,15 +115,17 @@ export class CustomServer {
 
     const executeWithRetry = async (attempt: number): Promise<any> => {
       try {
-        const result = await this.client.request({
+        const timeoutPromise = new Promise((_, reject) => 
+          +   setTimeout(() => reject(new Error('Request timeout')), 10000));
+
+        const result = await Promise.race([timeoutPromise, this.client.request({
           method: 'tools/call',
           params: {
             name: toolName,
             arguments: params
           }
-        }, CallToolResultSchema);
+        }, CallToolResultSchema)]);
         return result;
-        // "Error: Cannot destructure property 'address' of 'request.params.arguments' as it is undefined."
       } catch (e) {
         if (attempt >= retries) {
           throw e;

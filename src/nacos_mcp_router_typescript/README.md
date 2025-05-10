@@ -53,9 +53,9 @@ npm run dev-stdio
 
 可通过 `.env` 文件或环境变量配置 Nacos 相关参数：
 
-- `NACOS_SERVER_ADDR`：Nacos 服务地址（默认：47.109.140.197:8848）
+- `NACOS_SERVER_ADDR`：Nacos 服务地址（默认：localhost:8848）
 - `NACOS_USERNAME`：Nacos 用户名（默认：nacos）
-- `NACOS_PASSWORD`：Nacos 密码（默认：Ip7x9546iT）
+- `NACOS_PASSWORD`：Nacos nacos_password
 
 ## 目录结构
 

@@ -2,6 +2,7 @@ import { HierarchicalNSW } from 'hnswlib-node';
 // import { pipeline } from '@xenova/transformers'; // 改为动态导入
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 
 type Metadata = Record<string, any>;
 
@@ -36,8 +37,8 @@ export class MemoryVectorDB {
     this.numDimensions = options.numDimensions;
     this.maxElements = options.maxElements || 10000;
     this.spaceType = options.spaceType || 'cosine';
-    this.indexFile = options.indexFile || path.join('./', 'my_hnsw_index.bin');
-    this.metadataFile = options.metadataFile || path.join('./', 'my_hnsw_metadata.json');
+    this.indexFile = options.indexFile || path.join(os.tmpdir(), 'nacos-mcp-router', 'my_hnsw_index.bin');
+    this.metadataFile = options.metadataFile || path.join(os.tmpdir(), 'nacos-mcp-router', 'my_hnsw_metadata.json');
     this.modelName = options.modelName || 'Xenova/all-MiniLM-L6-v2';
 
     if (options.clearOnStart) {
