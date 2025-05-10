@@ -15,33 +15,27 @@
 ## 安装与依赖
 
 ### 环境要求
-
 - Node.js 16+
 - Nacos 服务端
 
-### 安装依赖
-
-```bash
-npm install
-```
 
 ## 使用方法
 
-### 启动服务
-
-- 开发模式
-
-```bash
-# 启动开发服务 stdio
-npm run dev-stdio
-```
-
 - 配置mcp server
 ```json
+// 需要安装向量数据库等依赖，耐心等待
 {
   "mcpServers": {
     "nacos-mcp-router": {
-      "url": "http://localhost:3000/mcp"
+      "command": "npx",
+      "args": [
+        "nacos-mcp-router"
+      ],
+      "env": {
+        "NACOS_USERNAME": "nacos",
+        "NACOS_PASSWORD": "nacos_password",
+        "NACOS_SERVER_ADDR": "localhost:8848"
+      }
     }
   }
 }

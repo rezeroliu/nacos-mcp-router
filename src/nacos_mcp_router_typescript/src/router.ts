@@ -165,8 +165,11 @@ ${content}
         await this.vectorDB.isReady();
         logger.info(`vectorDB is ready, collectionId: ${this.vectorDB._collectionId}`);
       }
-      await this.nacosClient.isReady();
-      logger.info(`nacosClient is ready`);
+      const isReady = await this.nacosClient.isReady();
+      if (!isReady) {
+        throw new McpError(ErrorCode.InternalError, "Nacos client is not ready or not connected, please check the nacos server conifg");
+      }
+      logger.info(`nacosClient is ready: ${isReady}`);
       if (!this.mcpManager) {
         this.mcpManager = new McpManager(this.nacosClient, this.vectorDB, 60000);
       }
