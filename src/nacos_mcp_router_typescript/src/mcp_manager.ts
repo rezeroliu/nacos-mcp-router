@@ -198,9 +198,10 @@ export class McpManager {
         }
       }
 
-      const server = new CustomServer(mcpServerName, mcpServer.agentConfig);
+      const server = new CustomServer(mcpServerName, mcpServer.agentConfig, mcpServer.mcpConfigDetail?.protocol || 'stdio');
       // await server.waitForInitialization();
       await server.start(mcpServerName);
+      // TODO: StreamableHttpTransport 无SessionId
       if (server.healthy()) {
         this.healthyMcpServers.set(mcpServerName, server);
       }

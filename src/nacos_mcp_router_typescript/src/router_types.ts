@@ -6,9 +6,7 @@ import { MemoryVectorDB } from './memory_vector';
 import { NacosMcpServerConfigImpl } from './nacos_mcp_server_config';
 import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { CallToolResultSchema, ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
-import { spawn, execSync } from "child_process";
-import path from "path";
-import os from "os";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 
 function _stdioTransportContext(config: Record<string, any>): StdioClientTransport {
   return new StdioClientTransport({
@@ -25,21 +23,31 @@ function _sseTransportContext(config: Record<string, any>): SSEClientTransport {
   });
 }
 
+function _streamableHttpTransportContext(config: Record<string, any>): StreamableHTTPClientTransport {
+  return new StreamableHTTPClientTransport(config.url, {
+    // headers: config.headers,
+    // timeout: 10
+  });
+}
+
 export class CustomServer {
   private name: string;
   private config: Record<string, any>;
   private _transportContextFactory: (config: Record<string, any>) => Transport;
   private client: Client;
 
-  constructor(name: string, config: Record<string, any>) {
+  constructor(name: string, config: Record<string, any>, protocol: string) {
     this.name = name;
     this.config = config;
 
-    logger.info(`mcp server config: ${JSON.stringify(config)}`);
+    logger.info(`mcp server config: ${JSON.stringify(config)}, protocol: ${protocol}`);
 
-    this._transportContextFactory = 'url' in config.mcpServers[name]
-      ? _sseTransportContext
-      : _stdioTransportContext;
+    this._transportContextFactory = _stdioTransportContext;
+    if (protocol === 'mcp-sse') {
+      this._transportContextFactory = _sseTransportContext;
+    } else if (protocol === 'mcp-streamble') {
+      this._transportContextFactory = _streamableHttpTransportContext;
+    }
 
     // 全局保持一个client 切换连接？
     this.client = new Client({
@@ -67,6 +75,8 @@ export class CustomServer {
       if (!transport) {
         return false;
       }
+
+      logger.info(`check health, transport: ${JSON.stringify(transport)}`);
 
       // 检查 transport 类型并进行相应的健康检查  
       if (transport instanceof StdioClientTransport) {
@@ -207,7 +217,7 @@ export class VectorDB {
 
   constructor() {
     this._collectionId = `nacos_mcp_router-collection-${process.pid}`;
-    this.db = new MemoryVectorDB({ numDimensions: 384, indexFile: './my_hnsw_index.bin', metadataFile: './my_hnsw_metadata.json', clearOnStart: true });
+    this.db = new MemoryVectorDB({ numDimensions: 384, clearOnStart: true });
   }
 
   public async start() {

@@ -69,7 +69,7 @@ app.post('/messages', async (req: Request, res: Response) => {
 });
 
 // Start the server
-const PORT = 3000;
+const PORT = 3001;
 app.listen(PORT, () => {
   logger.info(`Simple SSE Server (deprecated protocol version 2024-11-05) listening on port ${PORT}`);
 });

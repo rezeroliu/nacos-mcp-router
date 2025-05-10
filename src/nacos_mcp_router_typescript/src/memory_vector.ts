@@ -84,6 +84,15 @@ export class MemoryVectorDB {
   }
 
   public save() {
+    // 确保父目录存在
+    const indexDir = path.dirname(this.indexFile);
+    const metadataDir = path.dirname(this.metadataFile);
+    if (!fs.existsSync(indexDir)) {
+      fs.mkdirSync(indexDir, { recursive: true });
+    }
+    if (!fs.existsSync(metadataDir)) {
+      fs.mkdirSync(metadataDir, { recursive: true });
+    }
     this.index.writeIndexSync(this.indexFile);
     fs.writeFileSync(this.metadataFile, JSON.stringify(this.metadatas, null, 2));
   }
