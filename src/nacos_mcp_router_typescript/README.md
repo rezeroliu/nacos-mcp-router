@@ -29,7 +29,7 @@
     "nacos-mcp-router": {
       "command": "npx",
       "args": [
-        "nacos-mcp-router"
+        "nacos-mcp-router@latest"
       ],
       "env": {
         "NACOS_USERNAME": "nacos",
