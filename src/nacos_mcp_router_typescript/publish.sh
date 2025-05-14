@@ -41,32 +41,32 @@ npm run build || { echo -e "${RED}构建失败，请检查构建脚本。${NC}";
 # npm test || { echo -e "${RED}测试失败，请修复测试用例。${NC}"; exit 1; }
 
 # 选择版本更新类型
-# echo -e "${GREEN}请选择版本更新类型:${NC}"
-# select update_type in "patch" "minor" "major" "custom"; do
-#     case $update_type in
-#         patch|minor|major)
-#             echo -e "${GREEN}将更新版本: ${update_type}${NC}"
-#             break
-#             ;;
-#         custom)
-#             read -p "请输入自定义版本号: " custom_version
-#             update_type="custom $custom_version"
-#             break
-#             ;;
-#         *)
-#             echo -e "${RED}无效选择${NC}"
-#             ;;
-#     esac
-# done
+echo -e "${GREEN}请选择版本更新类型:${NC}"
+select update_type in "patch" "minor" "major" "custom"; do
+    case $update_type in
+        patch|minor|major)
+            echo -e "${GREEN}将更新版本: ${update_type}${NC}"
+            break
+            ;;
+        custom)
+            read -p "请输入自定义版本号: " custom_version
+            update_type="custom $custom_version"
+            break
+            ;;
+        *)
+            echo -e "${RED}无效选择${NC}"
+            ;;
+    esac
+done
 
 # 更新版本号
-# echo -e "${GREEN}正在更新版本号...${NC}"
-# if [[ "$update_type" == "custom"* ]]; then
-#     custom_version=$(echo $update_type | cut -d' ' -f2)
-#     npm version $custom_version -m "chore(release): 发布 v%s"
-# else
-#     npm version $update_type -m "chore(release): 发布 v%s"
-# fi
+echo -e "${GREEN}正在更新版本号...${NC}"
+if [[ "$update_type" == "custom"* ]]; then
+    custom_version=$(echo $update_type | cut -d' ' -f2)
+    npm version $custom_version -m "chore(release): 发布 v%s"
+else
+    npm version $update_type -m "chore(release): 发布 v%s"
+fi
 
 # 获取新版本号
 new_version=$(jq -r '.version' package.json)
@@ -89,8 +89,8 @@ fi
 git commit -m "chore(release): 准备发布 v$new_version"
 
 # 推送到远程仓库
-# echo -e "${GREEN}正在推送到远程仓库...${NC}"
-# git push origin $current_branch
+echo -e "${GREEN}正在推送到远程仓库...${NC}"
+git push origin $current_branch
 
 # 创建并推送tag
 echo -e "${GREEN}正在创建版本标签...${NC}"

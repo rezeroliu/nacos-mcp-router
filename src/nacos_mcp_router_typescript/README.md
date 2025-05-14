@@ -23,7 +23,6 @@
 
 - 配置mcp server
 ```json
-// 需要安装向量数据库等依赖，耐心等待
 {
   "mcpServers": {
     "nacos-mcp-router": {
