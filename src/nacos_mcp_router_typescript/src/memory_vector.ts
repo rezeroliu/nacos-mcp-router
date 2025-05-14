@@ -3,6 +3,7 @@ import { HierarchicalNSW } from 'hnswlib-node';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { logger } from './logger';
 
 type Metadata = Record<string, any>;
 
@@ -42,16 +43,24 @@ export class MemoryVectorDB {
     this.modelName = options.modelName || 'Xenova/all-MiniLM-L6-v2';
 
     if (options.clearOnStart) {
-      if (fs.existsSync(this.indexFile)) fs.unlinkSync(this.indexFile);
-      if (fs.existsSync(this.metadataFile)) fs.unlinkSync(this.metadataFile);
+      if (fs.existsSync(this.indexFile)) {
+        fs.unlinkSync(this.indexFile);
+        logger.info(`[MemoryVectorDB] 已清除索引文件: ${this.indexFile}`);
+      }
+      if (fs.existsSync(this.metadataFile)) {
+        fs.unlinkSync(this.metadataFile);
+        logger.info(`[MemoryVectorDB] 已清除元数据文件: ${this.metadataFile}`);
+      }
     }
 
     this.index = new HierarchicalNSW(this.spaceType, this.numDimensions);
 
     if (fs.existsSync(this.indexFile) && fs.existsSync(this.metadataFile)) {
+      logger.info(`[MemoryVectorDB] 加载已有索引: ${this.indexFile} 和元数据: ${this.metadataFile}`);
       this.index.readIndexSync(this.indexFile);
       this.metadatas = JSON.parse(fs.readFileSync(this.metadataFile, 'utf-8'));
     } else {
+      logger.info(`[MemoryVectorDB] 初始化新索引, 最大元素数: ${this.maxElements}`);
       this.index.initIndex(this.maxElements);
     }
   }
@@ -66,15 +75,19 @@ export class MemoryVectorDB {
   }
 
   public async add(text: string, metadata: Metadata = {}) {
+    logger.info(`[MemoryVectorDB] 添加文本到向量库: ${text.slice(0, 30)}...`);
     const vector = await this.getEmbedding(text);
     const label = this.index.getCurrentCount();
     this.index.addPoint(vector, label);
     this.metadatas[label] = { ...metadata, text };
+    logger.info(`[MemoryVectorDB] 添加完成，label: ${label}`);
   }
 
   public async search(query: string, k: number = 5) {
+    logger.info(`[MemoryVectorDB] 搜索: ${query.slice(0, 30)}...，topK=${k}`);
     const queryVector = await this.getEmbedding(query);
     const results = this.index.searchKnn(queryVector, k);
+    logger.info(`[MemoryVectorDB] 搜索完成，返回${results.neighbors.length}条结果`);
     return results.neighbors.map((label: number, i: number) => ({
       metadata: this.metadatas[label],
       label,
@@ -95,12 +108,16 @@ export class MemoryVectorDB {
     }
     this.index.writeIndexSync(this.indexFile);
     fs.writeFileSync(this.metadataFile, JSON.stringify(this.metadatas, null, 2));
+    logger.info(`[MemoryVectorDB] 索引和元数据已保存到: ${this.indexFile}, ${this.metadataFile}`);
   }
 
   public load() {
     if (fs.existsSync(this.indexFile) && fs.existsSync(this.metadataFile)) {
       this.index.readIndexSync(this.indexFile);
       this.metadatas = JSON.parse(fs.readFileSync(this.metadataFile, 'utf-8'));
+      logger.info(`[MemoryVectorDB] 已加载索引和元数据`);
+    } else {
+      logger.info(`[MemoryVectorDB] 未找到索引或元数据文件，无法加载`);
     }
   }
 
