@@ -91,11 +91,7 @@ export class CustomServer {
       } catch {
         logger.error('Failed to list resources after change notification');
       }
-      // Re-display the prompt
-      // process.stdout.write('> ');
     });
-    // TODO: 👆也没有初始化sessionId 加上就有了sessionId 魔法？
-
     // Connect the client
     let transport: Transport;
     if (this.protocol === 'mcp-streamble') {

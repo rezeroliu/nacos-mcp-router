@@ -76,14 +76,15 @@ export class McpManager {
   }
 
   public async asyncUpdater(): Promise<void> {
+    let retryDelay = 5000;
     while (true) {
       try {
-        await new Promise((resolve) =>
-          setTimeout(resolve, this.update_interval * 1000)
-        );
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
         await this.updateNow();
+        retryDelay = 5000; // 重置间隔
       } catch (error) {
-        logger.warn("Exception while updating mcp servers:", error);
+        logger.error("更新失败，将在", retryDelay / 1000, "秒后重试", error);
+        retryDelay = Math.min(retryDelay * 2, 60000); // 最大1分钟
       }
     }
   }

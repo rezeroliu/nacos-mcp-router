@@ -2,6 +2,7 @@ import winston from 'winston'; // 日志滚动
 import path from 'path';
 import os from 'os';
 import 'winston-daily-rotate-file';
+import fs from 'fs';
 
 export class NacosMcpRouteLogger {
   private static logger: winston.Logger | null = null;
@@ -10,9 +11,14 @@ export class NacosMcpRouteLogger {
     const logDir = path.join(os.homedir(), 'logs', 'nacos_mcp_router');
     const logFile = path.join(logDir, 'router.log');
 
-    // 确保日志目录存在
-    if (!require('fs').existsSync(logDir)) {
-      require('fs').mkdirSync(logDir, { recursive: true });
+    try {
+      // 确保日志目录存在
+      if (fs.existsSync(logDir)) {
+        fs.mkdirSync(logDir, { recursive: true });
+      }
+    } catch (err) {
+      // logger.error(`Failed to create log directory: ${logDir}`, err);
+      // throw err;
     }
 
     const formatter = winston.format.combine(
