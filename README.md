@@ -99,35 +99,4 @@ python -m nacos-mcp-router
 }
 ```
 
-> You may need to put the full path to the `uvx` executable in the `command` field. You can get this by running `which uvx` on MacOS/Linux or `where uvx` on Windows.
-
-
-## Development
-
-If you are doing local development, simply follow the steps:
-
-1. Clone this repo into your local environment.
-2. Modify codes in `src/mcp_server_nacos` to implement your wanted features.
-3. Test using the Claude desktop app. Add the following to your claude_desktop_config.json:
-
-```json
-{
-  "mcpServers": {
-    "nacos-mcp-router": {
-      "command": "uv",
-      "args": [
-        "--directory","PATH-TO-PROJECT","run","nacos-mcp-router"
-      ],
-      "env": {
-        "NACOS_ADDR": "<NACOS-ADDR>, optional, default is 127.0.0.1:8848",
-        "NACOS_USERNAME": "<NACOS-USERNAME>, optional, default is nacos",
-        "NACOS_PASSWORD": "<NACOS-PASSWORD>, required"
-      }
-    }
-  }
-}
-```
-
-## License
-
-nacos-mcp-router is licensed under the Apache 2.0 License. This means you are free to use, modify, and distribute the software, subject to the terms and conditions of the Apache 2.0 License. For more details, please see the `LICENSE` file in the project repository.
+### Typescript接入
