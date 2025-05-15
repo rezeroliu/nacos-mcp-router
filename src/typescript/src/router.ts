@@ -171,7 +171,7 @@ ${content}
       }
       logger.info(`nacosClient is ready: ${isReady}`);
       if (!this.mcpManager) {
-        this.mcpManager = new McpManager(this.nacosClient, this.vectorDB, 60000);
+        this.mcpManager = new McpManager(this.nacosClient, this.vectorDB, 5000);
       }
       if (!this.mcpServer) {
         this.mcpServer = new McpServer({

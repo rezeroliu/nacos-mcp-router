@@ -100,3 +100,25 @@ python -m nacos-mcp-router
 ```
 
 ### Typescript接入
+
+#### 配置
+
+在 MCP 客户端（如 Cursor、Cline 等）中添加如下配置：
+
+```json
+{
+  "mcpServers": {
+    "nacos-mcp-router": {
+      "command": "npx",
+      "args": [
+        "nacos-mcp-router@latest"
+      ],
+      "env": {
+        "NACOS_ADDR": "<NACOS-ADDR>, 选填，默认为127.0.0.1:8848",
+        "NACOS_USERNAME": "<NACOS-USERNAME>, 选填，默认为nacos",
+        "NACOS_PASSWORD": "<NACOS-PASSWORD>, 必填"
+      }
+    }
+  }
+}
+```
