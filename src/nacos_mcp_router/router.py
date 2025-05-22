@@ -58,10 +58,9 @@ async def search_mcp_server(task_description: str, key_words: str) -> str:
 
     content = json.dumps(result, ensure_ascii=False)
 
-    jsonString = "## 获取" + task_description + "的步骤如下：\n" + '''
-    ### 1. 当前可用的mcp server列表为：''' + content + '''
-    \n ### 2. 从当前可用的mcp server列表中选择你需要的mcp server调add_mcp_server工具安装mcp server
-    '''
+    jsonString = ("## 获取" + task_description + "的步骤如下：\n"
+                  + "### 1. 当前可用的mcp server列表为：" + content
+                  + "\n### 2. 从当前可用的mcp server列表中选择你需要的mcp server调add_mcp_server工具安装mcp server")
     return jsonString
   except Exception as e:
     router_logger.warning("failed to search_mcp_server: " + task_description, exc_info=e)
@@ -144,7 +143,7 @@ async def add_mcp_server(mcp_server_name: str) -> str:
 
     nacos_http_client.update_mcp_tools(mcp_server_name,tools)
 
-    result = "1. " + mcp_server_name + "安装完成, tool 列表为: " + json.dumps(tool_list, ensure_ascii=False) +  "\n 2." + mcp_server_name + "的工具需要通过nacos-mcp-router的use_tool工具代理使用"
+    result = "1. " + mcp_server_name + "安装完成, tool 列表为: " + json.dumps(tool_list, ensure_ascii=False) +  "\n2." + mcp_server_name + "的工具需要通过nacos-mcp-router的use_tool工具代理使用"
     return result
   except Exception as e:
     router_logger.warning("failed to install mcp server: " + mcp_server_name, exc_info=e)
