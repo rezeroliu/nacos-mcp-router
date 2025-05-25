@@ -1,7 +1,10 @@
+#-*- coding: utf-8 -*-
 import json
 from dataclasses import dataclass, field
 from typing import List, Dict, Any
 from .logger import NacosMcpRouteLogger
+
+
 @dataclass
 class InputProperty:
     type: str
@@ -123,6 +126,7 @@ class NacosMcpServerConfig:
     protocol: str
     description: str | None
     version: str
+    id: str | None
     remote_server_config: RemoteServerConfig
     local_server_config: Dict[str, Any] = field(default_factory=dict)
     enabled: bool = True
@@ -145,7 +149,8 @@ class NacosMcpServerConfig:
                 enabled=data.get("enabled", True),
                 capabilities=data.get("capabilities", []),
                 backend_endpoints=[BackendEndpoint.from_dict(e) for e in data.get("backendEndpoints", [])] if backend_endpoints_data else [],
-                tool_spec=ToolSpec.from_dict(tool_spec_data) if tool_spec_data else ToolSpec(tools=[], tools_meta={})
+                tool_spec=ToolSpec.from_dict(tool_spec_data) if tool_spec_data else ToolSpec(tools=[], tools_meta={}),
+                id=data["id"] if data.get("id") else None
             )
         except Exception as e:
             NacosMcpRouteLogger.get_logger().warning("failed to parse NacosMcpServerConfig from data: %s", data,  exc_info=e)
