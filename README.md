@@ -152,7 +152,7 @@ docker run -i --rm --network host -e NACOS_ADDR=$NACOS_ADDR -e NACOS_USERNAME=$N
 | NACOS_ADDR | Nacos 服务器地址   | 127.0.0.1:8848 | 否    | 填写 Nacos 服务器的地址，如 192.168.1.1:8848，注意要写端口 |
 | NACOS_USERNAME | Nacos 用户名     | nacos          | 否    | 填写 Nacos 用户名，如 nacos                      |
 | NACOS_PASSWORD | Nacos 密码      | 密码             | 是    | 填写 Nacos 密码，如 nacos                       |
-|NACOS_NAMESPACE| Nacos命名空间     | public         | 否    ||
+|NACOS_NAMESPACE| Nacos命名空间     | public         | 否    | Nacos命名空间，如 public                        |
 | TRANSPORT_TYPE | 传输协议类型        | stdio          | 否    | 填写传输协议类型，可选值：stdio、sse、streamable_http    |
 | PROXIED_MCP_NAME | 代理的 MCP 服务器名称 | -              | 否    | proxy模式下需要被转换的 MCP 服务器名称，需要先注册到Nacos      |
 | MODE | 工作模式          | router         | 否    | 可选的值：router、proxy                         |
