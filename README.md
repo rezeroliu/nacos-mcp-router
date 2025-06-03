@@ -125,7 +125,6 @@ docker run -i --rm --network host -e NACOS_ADDR=$NACOS_ADDR -e NACOS_USERNAME=$N
 ```
 
 #### Environment Variable Settings  
-### 环境变量设置
 
 | Parameter | Description                                                | Default Value | Required | Remarks                                                                                       |  
 |-----------|------------------------------------------------------------|---------------|----------|-----------------------------------------------------------------------------------------------|  
