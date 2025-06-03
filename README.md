@@ -125,17 +125,18 @@ docker run -i --rm --network host -e NACOS_ADDR=$NACOS_ADDR -e NACOS_USERNAME=$N
 
 #### Environment Variable Settings  
 ### 环境变量设置
-|    |               |                |      |                                           |
-|----|---------------|----------------|------|-------------------------------------------|
-|  参数 | 描述            | 默认值            | 是否必填 | 备注                                        |
-| NACOS_ADDR | Nacos 服务器地址   | 127.0.0.1:8848 | 否    | 填写 Nacos 服务器的地址，如 192.168.1.1:8848，注意要写端口 |
-| NACOS_USERNAME | Nacos 用户名     | nacos          | 否    | 填写 Nacos 用户名，如 nacos                      |
-| NACOS_PASSWORD | Nacos 密码      | 密码             | 是    | 填写 Nacos 密码，如 nacos                       |
-|NACOS_NAMESPACE| Nacos命名空间     | public         | 否    | Nacos命名空间，如 public                        |
-| TRANSPORT_TYPE | 传输协议类型        | stdio          | 否    | 填写传输协议类型，可选值：stdio、sse、streamable_http    |
-| PROXIED_MCP_NAME | 代理的 MCP 服务器名称 | -              | 否    | proxy模式下需要被转换的 MCP 服务器名称，需要先注册到Nacos      |
-| MODE | 工作模式          | router         | 否    | 可选的值：router、proxy                         |
-| PORT | 服务端口          | 8000           | 否    | 协议类型为sse或streamable时使用                    |
+
+| Parameter | Description                                                | Default Value | Required | Remarks                                                                                       |  
+|-----------|------------------------------------------------------------|---------------|----------|-----------------------------------------------------------------------------------------------|  
+| NACOS_ADDR | Nacos server address                                       | 127.0.0.1:8848 | No       | the Nacos server address, e.g., 192.168.1.1:8848. Note: Include the port.                     |  
+| NACOS_USERNAME | Nacos username                                             | nacos | No       | the Nacos username, e.g., nacos.                                                              |  
+| NACOS_PASSWORD | Nacos password                                             | - | Yes      | the Nacos password, e.g., nacos.                                                              |
+|NACOS_NAMESPACE| Nacos Namespace                                            | public         | No       | Nacos namespace, e.g. public                                                                  |
+| TRANSPORT_TYPE | Transport protocol type                                    | stdio | No       | transport protocol type. Options: stdio, sse, streamable_http.                                |  
+| PROXIED_MCP_NAME | Proxied MCP server name                                    | - | No       | In proxy mode, specify the MCP server name to be converted. Must be registered in Nacos first. |  
+| MODE | Working mode                                               | router | No       | Available options: router, proxy.                                                             |
+| PORT| Service port when TRANSPORT_TYPE is sse or streamable_http | 8000| No       |                                       |
+
 ### typescript
 #### Usage with Cline、Cursor、Claude and other applications
 
