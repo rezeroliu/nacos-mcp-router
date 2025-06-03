@@ -1,5 +1,6 @@
-# nacos-mcp-router: A MCP server that provides  functionalities such as search, installation, proxy, and more.
 
+# nacos-mcp-router: A MCP server that provides  functionalities such as search, installation, proxy, and more.
+English | [中文版](README_cn.md)
 ## Overview
 
 [Nacos](https://nacos.io) is an easy-to-use platform designed for dynamic service discovery and configuration and service management. It helps you to build cloud native applications and microservices platform easily.
