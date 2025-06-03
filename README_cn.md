@@ -1,5 +1,8 @@
 # nacos-mcp-router: 一个提供MCP Server推荐、分发、安装及代理功能的MCP Server.
-中文 | [English](README.md)
+<p>
+<a href="./README.md">English</a> | <a href="./README_cn.md">简体中文</a> 
+</p>
+
 ## 概述
 
 [Nacos](https://nacos.io) 一个更易于构建云原生应用的动态服务发现、配置管理和服务管理平台。Nacos提供了一组简单易用的特性集，帮助您快速实现动态服务发现、服务配置、服务元数据及流量管理
