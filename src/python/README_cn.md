@@ -6,7 +6,7 @@
 
 Nacos-MCP-Router是一个基于MCP官方标准SDK实现的的MCP Server。它提供了一组工具，提供MCP Server推荐、分发、安装及代理其他MCP Server的功能，帮助用户更方便的使用MCP Server服务。
 
-Nacos-MCP-Routery有两种工作模式：
+Nacos-MCP-Router有两种工作模式：
 1. router模式：默认模式，通过MCP Server推荐、分发、安装及代理其他MCP Server的功能，帮助用户更方便的使用MCP Server服务。
 2. prroxy模式：使用环境变量MODE=proxy指定，通过简单配置可以把sse、stdio协议MCP Server转换为streamableHTTP协议MCP Server。
 
