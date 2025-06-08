@@ -6,9 +6,9 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl nodejs npm \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
 # 复制项目文件
-RUN ls -al .
+RUN ls -al ./
 COPY pyproject.toml .
 COPY README.md .
 COPY src/ src/
