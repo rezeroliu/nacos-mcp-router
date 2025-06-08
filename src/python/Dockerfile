@@ -8,9 +8,9 @@ RUN apt-get update && apt-get install -y \
     curl nodejs npm \
     && rm -rf /var/lib/apt/lists/*
 # 复制项目文件
-COPY pyproject.toml .
-COPY README.md .
-COPY src/ src/
+COPY ./pyproject.toml .
+COPY ./README.md .
+COPY ./src/ src/
 RUN mkdir -p /root/.cache/chroma/onnx_models/all-MiniLM-L6-v2/
 RUN curl -v https://chroma-onnx-models.s3.amazonaws.com/all-MiniLM-L6-v2/onnx.tar.gz -o /root/.cache/chroma/onnx_models/all-MiniLM-L6-v2/onnx.tar.gz
 
