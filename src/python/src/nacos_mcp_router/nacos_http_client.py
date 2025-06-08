@@ -1,6 +1,9 @@
 #-*- coding: utf-8 -*-
-
+import base64
+import hashlib
+import hmac
 import json
+import time
 import urllib.parse
 import httpx
 import asyncio
@@ -23,7 +26,7 @@ _SCHEMA_HTTP = "http"
 _SCHEMA = os.getenv("NACOS_SERVER_SCHEMA", _SCHEMA_HTTP)
 
 class NacosHttpClient:
-    def __init__(self, nacosAddr: str, userName: str, passwd: str, namespaceId: str) -> None:
+    def __init__(self, nacosAddr: str, userName: str, passwd: str, namespaceId: str, ak: str, sk: str) -> None:
         if not isinstance(nacosAddr, str) or not nacosAddr.strip():
             raise ValueError("nacosAddr must be a non-empty string")
         if not isinstance(userName, str) or not userName.strip():
@@ -36,6 +39,31 @@ class NacosHttpClient:
         self.passwd = passwd
         self.schema = _SCHEMA
         self.namespaceId = namespaceId
+        self.ak = ak
+        self.sk = sk
+
+        from .auth import StaticCredentialsProvider
+        self.credentials_provider = StaticCredentialsProvider(ak, sk)
+
+    def __do_sign(self, sign_str, sk):
+        return base64.encodebytes(
+            hmac.new(sk.encode(), sign_str.encode(), digestmod=hashlib.sha1).digest()).decode().strip()
+
+    def _inject_auth_info(self, headers: dict[str, str]) -> None:
+        credentials = self.credentials_provider.get_credentials()
+
+        if not str.strip(credentials.get_access_key_id()) or not str.strip(credentials.get_access_key_secret()):
+            return
+
+        ts = str(int(round(time.time() * 1000)))
+        sign_str = self.namespaceId + "+" + "DEFAULT_GROUP" + "+"+ ts
+
+        headers.update({
+            "Spas-AccessKey": credentials.get_access_key_id(),
+            "ak":credentials.get_access_key_id(),
+            "timeStamp": ts,
+        })
+        headers["Spas-Signature"] = self.__do_sign(sign_str, credentials.get_access_key_secret())
 
     async def get_mcp_server(self, id: str, name:str) -> McpServer:
         """
@@ -252,6 +280,7 @@ class NacosHttpClient:
                        "charset": "utf-8",
                        "userName": self.userName,
                        "password": self.passwd}
+            self._inject_auth_info(headers)
 
             async with httpx.AsyncClient() as client:
                 if method == "GET":
