@@ -11,8 +11,10 @@ RUN apt-get update && apt-get install -y \
 ARG ROUTER_VERSION=0.1.9
 
 WORKDIR /app
-RUN pwd && ls -al ./
+
 COPY . .
+
+RUN pwd && ls -al ./
 
 RUN mkdir -p /root/.cache/chroma/onnx_models/all-MiniLM-L6-v2/
 RUN curl -v https://chroma-onnx-models.s3.amazonaws.com/all-MiniLM-L6-v2/onnx.tar.gz -o /root/.cache/chroma/onnx_models/all-MiniLM-L6-v2/onnx.tar.gz
