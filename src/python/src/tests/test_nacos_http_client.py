@@ -6,9 +6,11 @@ from ..nacos_mcp_router.nacos_http_client import NacosHttpClient
 
 class TestAsyncGeneratorsPerformance(unittest.TestCase):
     def setUp(self):
-        ak = os.getenv("ACCESS_KEY_ID")
-        sk = os.getenv("ACCESS_KEY_SECRET")
-        self.client = NacosHttpClient(nacosAddr="localhost:8848", userName="nacos", passwd="pass", namespaceId="public", ak=ak, sk=sk)
+        ak = os.getenv("ACCESS_KEY_ID","test_ak")
+        sk = os.getenv("ACCESS_KEY_SECRET","test_sk")
+        params = {"nacosAddr": "localhost:8848", "userName": "nacos", "password": "pass",
+                  "namespaceId": "public", "ak": ak, "sk": sk}
+        self.client = NacosHttpClient(params)
     async def asynchronize(self, item):
         await asyncio.sleep(0.1)  # Simulate async operation
         return item * 2

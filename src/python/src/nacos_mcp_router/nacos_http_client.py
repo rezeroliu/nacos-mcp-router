@@ -26,11 +26,14 @@ _SCHEMA_HTTP = "http"
 _SCHEMA = os.getenv("NACOS_SERVER_SCHEMA", _SCHEMA_HTTP)
 
 class NacosHttpClient:
-    def __init__(self, nacosAddr: str, userName: str, passwd: str, namespaceId: str, ak: str, sk: str) -> None:
+    def __init__(self, params: dict[str,str]) -> None:
+        nacosAddr = params["nacosAddr"]
         if not isinstance(nacosAddr, str) or not nacosAddr.strip():
             raise ValueError("nacosAddr must be a non-empty string")
+        userName = params["userName"]
         if not isinstance(userName, str) or not userName.strip():
             raise ValueError("userName must be a non-empty string")
+        passwd = params["password"]
         if not isinstance(passwd, str) or not passwd.strip():
             raise ValueError("passwd must be a non-empty string")
 
@@ -38,12 +41,17 @@ class NacosHttpClient:
         self.userName = userName
         self.passwd = passwd
         self.schema = _SCHEMA
-        self.namespaceId = namespaceId
-        self.ak = ak
-        self.sk = sk
+        self.namespaceId = params["namespaceId"] if params["namespaceId"] else ""
+        self.ak = params["ak"] if params["ak"] else ""
+        self.sk = params["sk"] if params["sk"] else ""
+
+        if self.ak and not self.sk:
+            raise ValueError("ak and sk are required when using nacos http client")
+        if self.sk and not self.ak:
+            raise ValueError("ak and sk are required when using nacos http client")
 
         from .auth import StaticCredentialsProvider
-        self.credentials_provider = StaticCredentialsProvider(ak, sk)
+        self.credentials_provider = StaticCredentialsProvider(self.ak, self.sk)
 
     def __do_sign(self, sign_str, sk):
         return base64.encodebytes(
@@ -56,7 +64,7 @@ class NacosHttpClient:
             return
 
         ts = str(int(round(time.time() * 1000)))
-        sign_str = self.namespaceId + "+" + "DEFAULT_GROUP" + "+"+ ts
+        sign_str = self.namespaceId if self.namespaceId else "public" + "+" + "DEFAULT_GROUP" + "+"+ ts
 
         headers.update({
             "Spas-AccessKey": credentials.get_access_key_id(),
