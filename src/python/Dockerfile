@@ -1,20 +1,10 @@
 FROM python:3.12-slim
-
-
-
 # 安装系统依赖
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    curl nodejs npm \
-    && rm -rf /var/lib/apt/lists/* \
-# 复制项目文件
-ARG ROUTER_VERSION=0.1.9
+RUN apt-get update && apt-get install -y build-essential curl nodejs npm && apt-get clean
 
 WORKDIR /app
 
 COPY src/python .
-
-RUN pwd && ls -al ./
 
 RUN mkdir -p /root/.cache/chroma/onnx_models/all-MiniLM-L6-v2/
 RUN curl -v https://chroma-onnx-models.s3.amazonaws.com/all-MiniLM-L6-v2/onnx.tar.gz -o /root/.cache/chroma/onnx_models/all-MiniLM-L6-v2/onnx.tar.gz
