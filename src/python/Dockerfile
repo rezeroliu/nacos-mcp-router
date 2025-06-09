@@ -12,7 +12,7 @@ ARG ROUTER_VERSION=0.1.9
 
 WORKDIR /app
 
-COPY . .
+COPY src/python .
 
 RUN pwd && ls -al ./
 
