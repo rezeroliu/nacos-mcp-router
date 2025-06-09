@@ -7,7 +7,7 @@ name: Publish Docker image
 
 on:
   push:
-
+    tags: [ '*.*.*' ]
 jobs:
   push_to_registry:
     name: Push Docker image to Docker Hub
@@ -16,7 +16,7 @@ jobs:
       - name: Extract Version
         id: version_step
         run: |
-          echo "##[set-output name=version;]NACOS_VERSION=${GITHUB_REF#$"refs/tags/"}"
+          echo "##[set-output name=version;]NACOS_VERSION=${GITHUB_REF#$"refs/tags/v"}"
 
       - name: Check out the repo
         uses: actions/checkout@v2
@@ -49,7 +49,7 @@ jobs:
           context: . 
           platforms: linux/amd64,linux/arm64
           file: src/python/Dockerfile
-          push: false
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: ${{steps.version_step.outputs.version}}
