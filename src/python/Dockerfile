@@ -9,8 +9,9 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* \
 # 复制项目文件
 ARG ROUTER_VERSION=0.1.9
-RUN pwd && ls -al ./
 
+WORKDIR /app
+RUN pwd && ls -al ./
 COPY . .
 
 RUN mkdir -p /root/.cache/chroma/onnx_models/all-MiniLM-L6-v2/
