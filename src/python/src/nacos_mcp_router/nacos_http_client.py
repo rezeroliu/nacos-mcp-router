@@ -68,7 +68,6 @@ class NacosHttpClient:
 
         headers.update({
             "Spas-AccessKey": credentials.get_access_key_id(),
-            "ak":credentials.get_access_key_id(),
             "timeStamp": ts,
         })
         headers["Spas-Signature"] = self.__do_sign(sign_str, credentials.get_access_key_secret())
