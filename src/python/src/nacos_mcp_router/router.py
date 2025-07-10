@@ -452,7 +452,10 @@ def create_mcp_app() -> Server:
                     content = await add_mcp_server(arguments["mcp_server_name"])
                     return [types.TextContent(type="text", text=content)]
                 case "use_tool":
-                    params = json.loads(arguments["params"])
+                    if isinstance(arguments["params"], str):
+                        params = json.loads(arguments["params"])
+                    else:
+                        params = arguments["params"]
                     content = await use_tool(arguments["mcp_server_name"], arguments["mcp_tool_name"], params)
                     return [types.TextContent(type="text", text=content)]
                 case _:
